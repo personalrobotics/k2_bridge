@@ -22,5 +22,32 @@ namespace PersonalRobotics.Kinect2Server.Properties {
                 return defaultInstance;
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("9000")]
+        public short RgbImagePort {
+            get {
+                return ((short)(this["RgbImagePort"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("9001")]
+        public short DepthImagePort {
+            get {
+                return ((short)(this["DepthImagePort"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("9002")]
+        public short IrImagePort {
+            get {
+                return ((short)(this["IrImagePort"]));
+            }
+        }
     }
 }

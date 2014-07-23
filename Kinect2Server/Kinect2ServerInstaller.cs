@@ -15,7 +15,7 @@ public class Kinect2ServerInstaller : Installer
     /// (http://msdn.microsoft.com/en-us/library/aa984379%28v=vs.71%29.aspx)
     /// 
     /// InstallUtil /LogToConsole=true Kinect2Server.exe
-    /// installutil /u Kinect2Server.exe
+    /// InstallUtil /u Kinect2Server.exe
     /// 
     /// </summary>
     public Kinect2ServerInstaller()

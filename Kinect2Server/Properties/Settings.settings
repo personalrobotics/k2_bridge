@@ -1,7 +1,15 @@
 ﻿<?xml version='1.0' encoding='utf-8'?>
-<SettingsFile xmlns="uri:settings" CurrentProfile="(Default)">
-  <Profiles>
-    <Profile Name="(Default)" />
-  </Profiles>
-  <Settings />
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="PersonalRobotics.Kinect2Server.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="RgbImagePort" Type="System.Int16" Scope="Application">
+      <Value Profile="(Default)">9000</Value>
+    </Setting>
+    <Setting Name="DepthImagePort" Type="System.Int16" Scope="Application">
+      <Value Profile="(Default)">9001</Value>
+    </Setting>
+    <Setting Name="IrImagePort" Type="System.Int16" Scope="Application">
+      <Value Profile="(Default)">9002</Value>
+    </Setting>
+  </Settings>
 </SettingsFile>
