@@ -19,14 +19,14 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 
-namespace startKinect4Herb
+namespace Kinect2Server
 {
-    public class FlagedSocket
+    public class FlaggedSocket
     {
         public Socket socket;
         public bool prevSendDoneFlag;
 
-        public FlagedSocket()
+        public FlaggedSocket()
         {
             this.prevSendDoneFlag = true;
         }
@@ -39,7 +39,7 @@ namespace startKinect4Herb
         public string localPCName;
 
         public Socket listnerSocket = null;
-        public SynchronizedCollection<FlagedSocket> connectedClientList = null;
+        public SynchronizedCollection<FlaggedSocket> connectedClientList = null;
         public bool connectedToAtleastOne = false;
 
         public asyncNetworkConnectorServer(int selfPortNum)
@@ -55,7 +55,7 @@ namespace startKinect4Herb
             IPHostEntry selfInfo = Dns.GetHostEntry(this.localPCName);
             this.selfIPaddress = selfInfo.AddressList[0];
             this.selfEndPoint = new IPEndPoint(this.selfIPaddress, this.selfPortNumber);
-            this.connectedClientList = new SynchronizedCollection<FlagedSocket>();
+            this.connectedClientList = new SynchronizedCollection<FlaggedSocket>();
             this.listnerSocket.Bind(this.selfEndPoint);
         }
         public void startListening()
@@ -68,7 +68,7 @@ namespace startKinect4Herb
             try
             {
                 asyncNetworkConnectorServer connector = (asyncNetworkConnectorServer)ar.AsyncState;
-                FlagedSocket tempSocket = new FlagedSocket();
+                FlaggedSocket tempSocket = new FlaggedSocket();
                 tempSocket.socket = (connector.listnerSocket.EndAccept(ar));
                 connector.connectedClientList.Add(tempSocket);
                 Console.WriteLine("Added socket to client list");
@@ -88,7 +88,7 @@ namespace startKinect4Herb
         {
             try
             {
-                FlagedSocket tempSocket = (FlagedSocket)ar.AsyncState;
+                FlaggedSocket tempSocket = (FlaggedSocket)ar.AsyncState;
                 if (tempSocket.socket.Connected)
                 {
                     int sentBytes = tempSocket.socket.EndSend(ar);
@@ -98,7 +98,7 @@ namespace startKinect4Herb
             }
             catch(Exception e)
             {
-                FlagedSocket tempSocket = (FlagedSocket)ar.AsyncState;
+                FlaggedSocket tempSocket = (FlaggedSocket)ar.AsyncState;
                 Console.WriteLine("Error in sendCallBack: " + e.ToString());
                 tempSocket.socket.Close();
                 tempSocket.socket.Dispose();
@@ -109,7 +109,7 @@ namespace startKinect4Herb
         {
 
         }
-        public void send(FlagedSocket tempSocket,byte[] data)
+        public void send(FlaggedSocket tempSocket,byte[] data)
         {
             try
             {
@@ -134,7 +134,7 @@ namespace startKinect4Herb
         }
         public void sendToAll(byte[] data)
         {
-            IEnumerator<FlagedSocket> enumerator = this.connectedClientList.GetEnumerator();
+            IEnumerator<FlaggedSocket> enumerator = this.connectedClientList.GetEnumerator();
             try
             {
                 while (enumerator.MoveNext())
@@ -149,7 +149,7 @@ namespace startKinect4Herb
         }
         public void closeSocket()
         {
-                IEnumerator<FlagedSocket> enumerator = this.connectedClientList.GetEnumerator();
+                IEnumerator<FlaggedSocket> enumerator = this.connectedClientList.GetEnumerator();
                 while (enumerator.MoveNext())
                 {
                     try
@@ -164,28 +164,6 @@ namespace startKinect4Herb
                 }
             }
     };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     /// <summary>
     /// Interaction logic for MainWindow.xaml

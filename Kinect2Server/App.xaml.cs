@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 
-namespace startKinect4Herb
+namespace Kinect2Server
 {
     /// <summary>
     /// Interaction logic for App.xaml
