@@ -1,0 +1,19 @@
+﻿<Window x:Class="startKinect4Herb.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="400" Width="525"
+        Loaded="MainWindow_Loaded"
+        Closing="MainWindow_Closing" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <Grid Margin="3,37,-4.6,-2.6" Opacity="100" Width="520" Height="336" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <TextBox Name="statusBox" HorizontalAlignment="Left" Height="24" Margin="45,285,0,-3" TextWrapping="Wrap" Text="Frame Rate" VerticalAlignment="Top" Width="120" RenderTransformOrigin="0.501,0.536" TextChanged="statusBox_TextChanged"/>
+        <TextBox Name="colorIPBox" HorizontalAlignment="Left" Height="24" Margin="45,225,0,0" TextWrapping="Wrap" Text="None yet" VerticalAlignment="Top" Width="120"/>
+        <Label Content="Color IP:" HorizontalAlignment="Left" Height="30" Margin="40,200,0,0" VerticalAlignment="Top" Width="100" RenderTransformOrigin="0.354,2.167"/>
+        <Label Content="Depth IP:" HorizontalAlignment="Left" Height="30" Margin="195,200,0,0" VerticalAlignment="Top" Width="70"/>
+        <TextBox Name="depthIPBox" HorizontalAlignment="Left" Height="24" Margin="200,225,0,0" TextWrapping="Wrap" Text="None yet" VerticalAlignment="Top" Width="120"/>
+        <Label Content="Frame Rate:" HorizontalAlignment="Left" Margin="40,260,0,0" VerticalAlignment="Top" Width="80"/>
+        <TextBox Name="IRipBox" HorizontalAlignment="Left" Height="24" Margin="370,225,0,0" TextWrapping="Wrap" Text="None yet" VerticalAlignment="Top" Width="120"/>
+        <Label Content="IR IP:" HorizontalAlignment="Left" Height="30" Margin="365,200,0,0" VerticalAlignment="Top" Width="70"/>
+
+        <Image x:Name="colorOutput" Margin="60,-30,60,141" Height="225" Width="400" RenderTransformOrigin="0.512,0.511" Stretch="Fill" />
+    </Grid>
+</Window>
