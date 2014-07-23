@@ -31,20 +31,20 @@ namespace Kinect2Server
             this.prevSendDoneFlag = true;
         }
     };
-    public class asyncNetworkConnectorServer
+    public class AsyncNetworkConnectorServer
     {
         public IPAddress selfIPaddress = null;
         public IPEndPoint selfEndPoint = null;
         public int selfPortNumber;
         public string localPCName;
 
-        public Socket listnerSocket = null;
+        public Socket listenerSocket = null;
         public SynchronizedCollection<FlaggedSocket> connectedClientList = null;
         public bool connectedToAtleastOne = false;
 
-        public asyncNetworkConnectorServer(int selfPortNum)
+        public AsyncNetworkConnectorServer(int selfPortNum)
         {
-            this.listnerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.listenerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.selfPortNumber = selfPortNum;
             this.finishSocketGroundWork();
         }
@@ -56,34 +56,37 @@ namespace Kinect2Server
             this.selfIPaddress = selfInfo.AddressList[0];
             this.selfEndPoint = new IPEndPoint(this.selfIPaddress, this.selfPortNumber);
             this.connectedClientList = new SynchronizedCollection<FlaggedSocket>();
-            this.listnerSocket.Bind(this.selfEndPoint);
+            this.listenerSocket.Bind(this.selfEndPoint);
         }
+
         public void startListening()
         {
-            this.listnerSocket.Listen(100);
-            this.listnerSocket.BeginAccept(new AsyncCallback(startListeningCallBack), this);
+            this.listenerSocket.Listen(100);
+            this.listenerSocket.BeginAccept(new AsyncCallback(startListeningCallBack), this);
         }
+
         public void startListeningCallBack(IAsyncResult ar)
         {
             try
             {
-                asyncNetworkConnectorServer connector = (asyncNetworkConnectorServer)ar.AsyncState;
+                AsyncNetworkConnectorServer connector = (AsyncNetworkConnectorServer)ar.AsyncState;
                 FlaggedSocket tempSocket = new FlaggedSocket();
-                tempSocket.socket = (connector.listnerSocket.EndAccept(ar));
+                tempSocket.socket = (connector.listenerSocket.EndAccept(ar));
                 connector.connectedClientList.Add(tempSocket);
                 Console.WriteLine("Added socket to client list");
-                connector.listnerSocket.BeginAccept(new AsyncCallback(startListeningCallBack), connector);
+                connector.listenerSocket.BeginAccept(new AsyncCallback(startListeningCallBack), connector);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Error in startListeningCallBack: " + e.ToString());
-
             }
         }
+
         public void recieveCallBack(IAsyncResult ar)
         {
 
         }
+
         public void sendCallBack(IAsyncResult ar)
         {
             try
@@ -96,7 +99,7 @@ namespace Kinect2Server
                     tempSocket.prevSendDoneFlag = true;
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 FlaggedSocket tempSocket = (FlaggedSocket)ar.AsyncState;
                 Console.WriteLine("Error in sendCallBack: " + e.ToString());
@@ -105,11 +108,13 @@ namespace Kinect2Server
                 this.connectedClientList.Remove(tempSocket);
             }
         }
+
         public void receive()
         {
 
         }
-        public void send(FlaggedSocket tempSocket,byte[] data)
+
+        public void send(FlaggedSocket tempSocket, byte[] data)
         {
             try
             {
@@ -132,6 +137,7 @@ namespace Kinect2Server
                 this.connectedClientList.Remove(tempSocket);
             }
         }
+
         public void sendToAll(byte[] data)
         {
             IEnumerator<FlaggedSocket> enumerator = this.connectedClientList.GetEnumerator();
@@ -142,27 +148,28 @@ namespace Kinect2Server
                     this.send(enumerator.Current, data);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("Error in sentToAll: " + e.ToString());
             }
         }
+
         public void closeSocket()
         {
-                IEnumerator<FlaggedSocket> enumerator = this.connectedClientList.GetEnumerator();
-                while (enumerator.MoveNext())
+            IEnumerator<FlaggedSocket> enumerator = this.connectedClientList.GetEnumerator();
+            while (enumerator.MoveNext())
+            {
+                try
                 {
-                    try
-                    {
-                        enumerator.Current.socket.Shutdown(SocketShutdown.Both);
-                        enumerator.Current.socket.Close();
-                    }
-                    catch(Exception e)
-                    {
-                        Console.WriteLine("Error in closing: " + e.ToString());
-                    }
+                    enumerator.Current.socket.Shutdown(SocketShutdown.Both);
+                    enumerator.Current.socket.Close();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Error in closing: " + e.ToString());
                 }
             }
+        }
     };
 
     /// <summary>
@@ -184,14 +191,14 @@ namespace Kinect2Server
         private int deltaTimeForFPS = 1;//In seconds
         private DateTime updateFPSMilestone = DateTime.Now;
 
-        private readonly int bytesPerColorPixel = (PixelFormats.Bgr32.BitsPerPixel + 7)/8;
+        private readonly int bytesPerColorPixel = (PixelFormats.Bgr32.BitsPerPixel + 7) / 8;
         private readonly int bytesPerDepthPixel = 2;
         private readonly int bytesPerIRPixel = 2;
 
         //TCP/IP crap
-        private asyncNetworkConnectorServer colorConnector = null;
-        private asyncNetworkConnectorServer depthConnector = null;
-        private asyncNetworkConnectorServer IRConnector = null;
+        private AsyncNetworkConnectorServer colorConnector = null;
+        private AsyncNetworkConnectorServer depthConnector = null;
+        private AsyncNetworkConnectorServer IRConnector = null;
 
         private const int BUFFER_SIZE_COLOR = 8294400;
         private const int BUFFER_SIZE_DEPTH = 4147200;
@@ -215,11 +222,11 @@ namespace Kinect2Server
             this.InitializeComponent();
             this.stopwatch = new Stopwatch();
             this.stopwatch.Start();
-            this.kinect = KinectSensor.Default; 
+            this.kinect = KinectSensor.Default;
             if (this.kinect != null)
             {
                 this.kinect.Open();
-                
+
                 this.colourArray = new byte[this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * this.bytesPerColorPixel];
                 this.depthArray = new ushort[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width];
                 this.IRArray = new ushort[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width];
@@ -230,7 +237,7 @@ namespace Kinect2Server
                 this.reader.MultiSourceFrameArrived += this.frameArrivedCallback;
                 this.updateFPSMilestone = DateTime.Now + TimeSpan.FromSeconds(this.deltaTimeForFPS);
 
-                this.colorBitMap = new WriteableBitmap( this.kinect.ColorFrameSource.FrameDescription.Width,
+                this.colorBitMap = new WriteableBitmap(this.kinect.ColorFrameSource.FrameDescription.Width,
                                                         this.kinect.ColorFrameSource.FrameDescription.Height,
                                                         96.0, 96.0, PixelFormats.Bgr32, null);
 
@@ -238,12 +245,13 @@ namespace Kinect2Server
                 //this.IRBitMap = new WriteableBitmap(IRFrameDescription.Width, IRFrameDescription.Height, 96.0, 96.0, PixelFormats.Bgr32, null);
             }
         }
+
         private void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             //instantiate sockets and get ip addresses. 
-            this.colorConnector = new asyncNetworkConnectorServer(colorPort);
-            this.depthConnector = new asyncNetworkConnectorServer(depthPort);
-            this.IRConnector = new asyncNetworkConnectorServer(IRPort);
+            this.colorConnector = new AsyncNetworkConnectorServer(colorPort);
+            this.depthConnector = new AsyncNetworkConnectorServer(depthPort);
+            this.IRConnector = new AsyncNetworkConnectorServer(IRPort);
 
             this.colorIPBox.Text = this.colorConnector.selfEndPoint.ToString();
             this.depthIPBox.Text = this.depthConnector.selfEndPoint.ToString();
@@ -253,10 +261,11 @@ namespace Kinect2Server
             this.depthConnector.startListening();
             this.IRConnector.startListening();
         }
+
         private void MainWindow_Closing(object sender, CancelEventArgs e)
         {
             if (this.reader != null)
-            {   
+            {
                 this.reader.Dispose();
                 this.reader = null;
             }
@@ -270,7 +279,7 @@ namespace Kinect2Server
             this.IRConnector.closeSocket();
 
         }
-        
+
         public ImageSource dispColor
         {
             get
@@ -293,16 +302,16 @@ namespace Kinect2Server
                 this.statusBox.Text = fps.ToString();
             }
             MultiSourceFrame multiSourceFrame = e.FrameReference.AcquireFrame();
-            using(ColorFrame cFrame = multiSourceFrame.ColorFrameReference.AcquireFrame())
+            using (ColorFrame cFrame = multiSourceFrame.ColorFrameReference.AcquireFrame())
             {
-                if(cFrame != null)
+                if (cFrame != null)
                 {
                     cFrame.CopyConvertedFrameDataToArray(this.colourArray, ColorImageFormat.Bgra);
                     //Not Needed
-                    this.colorBitMap.WritePixels(   new Int32Rect(0, 0, cFrame.FrameDescription.Width, cFrame.FrameDescription.Height),
+                    this.colorBitMap.WritePixels(new Int32Rect(0, 0, cFrame.FrameDescription.Width, cFrame.FrameDescription.Height),
                                                     this.colourArray,
                                                     cFrame.FrameDescription.Width * this.bytesPerColorPixel,
-                                                    0   );
+                                                    0);
                     colorOutput.Source = this.colorBitMap;
                     colorConnector.sendToAll(this.colourArray);
                 }
@@ -326,6 +335,7 @@ namespace Kinect2Server
                 }
             }
         }
+
         private void statusBox_TextChanged(object sender, TextChangedEventArgs e)
         {
 
