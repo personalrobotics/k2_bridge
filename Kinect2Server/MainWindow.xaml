@@ -1,4 +1,4 @@
-﻿<Window x:Class="Kinect2Server.MainWindow"
+﻿<Window x:Class="PersonalRobotics.Kinect2Server.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MainWindow" Height="400" Width="525"

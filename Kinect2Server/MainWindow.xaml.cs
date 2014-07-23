@@ -19,7 +19,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 
-namespace Kinect2Server
+namespace PersonalRobotics.Kinect2Server
 {
     public class FlaggedSocket
     {
