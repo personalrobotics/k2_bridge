@@ -41,7 +41,7 @@ namespace PersonalRobotics.Kinect2Server
         protected override void OnStart(string[] args)
         {
             // Try to open the first available Kinect sensor.
-            this.kinect = KinectSensor.GetDefault();
+            this.kinect = KinectSensor.Default;
             if (this.kinect == null)
             {
                 EventLog.WriteEntry("No Kinect device was detected.");  
@@ -92,6 +92,7 @@ namespace PersonalRobotics.Kinect2Server
             this.irConnector.Close();
 
             this.reader.Dispose(); // TODO: Is this actually necessary?
+            this.kinect.Dispose();
             this.colorConnector.Dispose();
             this.depthConnector.Dispose();
             this.irConnector.Dispose();
@@ -115,7 +116,7 @@ namespace PersonalRobotics.Kinect2Server
                 if (depthFrame != null)
                 {
                     depthFrame.CopyFrameDataToArray(this.depthArray);   //Ushort Array ! Use BitConverter.getBytes() to convert to two bytes per each uShort. it gives low byte followed by high byte
-                    System.Buffer.BlockCopy(this.depthArray, 0, this.byteDepthArray, 0, this.byteDepthArray.Length);
+                    Buffer.BlockCopy(this.depthArray, 0, this.byteDepthArray, 0, this.byteDepthArray.Length);
                     this.depthConnector.Broadcast(this.byteDepthArray);
                 }
             }
@@ -125,7 +126,7 @@ namespace PersonalRobotics.Kinect2Server
                 if (irFrame != null)
                 {
                     irFrame.CopyFrameDataToArray(this.irArray);     //Ushort Array ! Use BitConverter.getBytes() to convert to two bytes per each uShort. it gives low byte followed by high byte
-                    System.Buffer.BlockCopy(this.irArray, 0, this.byteIRArray, 0, this.byteIRArray.Length);
+                    Buffer.BlockCopy(this.irArray, 0, this.byteIRArray, 0, this.byteIRArray.Length);
                     this.irConnector.Broadcast(this.byteIRArray);
                 }
             }
