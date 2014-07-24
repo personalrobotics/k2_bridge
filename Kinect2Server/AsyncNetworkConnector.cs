@@ -121,7 +121,6 @@ namespace PersonalRobotics.Kinect2Server
         public void Close()
         {
             // Close the main listener socket.
-            this.listenerSocket.Disconnect(true);
             this.listenerSocket.Close();
 
             // Close each client socket.
