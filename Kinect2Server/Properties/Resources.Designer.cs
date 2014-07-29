@@ -59,5 +59,35 @@ namespace PersonalRobotics.Kinect2Server.Properties {
                 resourceCulture = value;
             }
         }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon KinectGreen {
+            get {
+                object obj = ResourceManager.GetObject("KinectGreen", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon KinectIcon {
+            get {
+                object obj = ResourceManager.GetObject("KinectIcon", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
+        /// </summary>
+        internal static System.Drawing.Icon KinectRed {
+            get {
+                object obj = ResourceManager.GetObject("KinectRed", resourceCulture);
+                return ((System.Drawing.Icon)(obj));
+            }
+        }
     }
 }
