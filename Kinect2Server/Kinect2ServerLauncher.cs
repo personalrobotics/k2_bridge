@@ -1,5 +1,6 @@
 ﻿using System;
 using System.ServiceProcess;
+using System.Windows.Forms;
 
 namespace PersonalRobotics.Kinect2Server
 {
@@ -8,9 +9,17 @@ namespace PersonalRobotics.Kinect2Server
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
-        static void Main()
+        [STAThread]
+        public static void Main()
         {
-            System.ServiceProcess.ServiceBase.Run(new Kinect2ServerService());
+            if (Environment.UserInteractive)
+            {
+                Application.Run(new Kinect2ServerTray());
+            }
+            else
+            {
+                System.ServiceProcess.ServiceBase.Run(new Kinect2ServerService());
+            }
         }
     }
 }
