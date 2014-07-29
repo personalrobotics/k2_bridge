@@ -38,6 +38,22 @@ namespace PersonalRobotics.Kinect2Server
             this.AutoLog = true;
         }
 
+        /// <summary>
+        /// Property that indicates whether the Kinect Server is connected to a sensor.
+        /// </summary>
+        public bool IsConnected
+        {
+            get
+            {
+                return (this.kinect != null) && kinect.IsAvailable;
+            }
+        }
+
+        /// <summary>
+        /// Event that triggers when the server detects a Kinect connection or disconnecting.
+        /// </summary>
+        public event EventHandler IsConnectedChanged;
+
         protected override void OnStart(string[] args)
         {
             // Try to open the first available Kinect sensor.
@@ -51,6 +67,7 @@ namespace PersonalRobotics.Kinect2Server
             else
             {
                 this.kinect.Open();
+                this.kinect.IsAvailableChanged += this.OnAvailableChanged;
             }
 
             // Register as a handler for the image data being returned by the Kinect.
@@ -129,6 +146,11 @@ namespace PersonalRobotics.Kinect2Server
                     this.irConnector.Broadcast(this.byteIRArray);
                 }
             }
+        }
+
+        protected void OnAvailableChanged(object sender, EventArgs e)
+        {
+            this.IsConnectedChanged(this, EventArgs.Empty);
         }
     }
 
