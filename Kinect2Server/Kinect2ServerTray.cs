@@ -30,9 +30,9 @@ namespace PersonalRobotics.Kinect2Server
             trayIcon.Visible = true;
         }
 
-        private void OnConnectionChanged(object sender, EventArgs e)
+        private void OnConnectionChanged(object sender, IsConnectedChangedEventArgs e)
         {
-            trayIcon.Icon = (service.IsConnected)
+            trayIcon.Icon = (e.IsConnected)
                 ? Kinect2Server.Properties.Resources.KinectGreen
                 : Kinect2Server.Properties.Resources.KinectRed;
         }

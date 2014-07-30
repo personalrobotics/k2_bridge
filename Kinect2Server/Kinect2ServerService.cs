@@ -13,22 +13,22 @@ namespace PersonalRobotics.Kinect2Server
     /// 
     public class Kinect2ServerService : ServiceBase
     {
-        private KinectSensor kinect;
-        private MultiSourceFrameReader reader;
+        KinectSensor kinect;
+        MultiSourceFrameReader reader;
 
-        private AsyncNetworkConnector colorConnector;
-        private AsyncNetworkConnector depthConnector;
-        private AsyncNetworkConnector irConnector;
+        AsyncNetworkConnector colorConnector;
+        AsyncNetworkConnector depthConnector;
+        AsyncNetworkConnector irConnector;
 
-        private byte[] colorArray;
-        private ushort[] depthArray;
-        private ushort[] irArray;
-        private byte[] byteDepthArray;
-        private byte[] byteIRArray;
+        byte[] colorArray;
+        ushort[] depthArray;
+        ushort[] irArray;
+        byte[] byteDepthArray;
+        byte[] byteIRArray;
 
-        private static readonly int BYTES_PER_COLOR_PIXEL = (PixelFormats.Bgr32.BitsPerPixel + 7) / 8;
-        private const int BYTES_PER_DEPTH_PIXEL = 2;
-        private const int BYTES_PER_IR_PIXEL = 2;
+        static readonly int BYTES_PER_COLOR_PIXEL = (PixelFormats.Bgr32.BitsPerPixel + 7) / 8;
+        const int BYTES_PER_DEPTH_PIXEL = 2;
+        const int BYTES_PER_IR_PIXEL = 2;
 
         public Kinect2ServerService()
         {
@@ -41,18 +41,12 @@ namespace PersonalRobotics.Kinect2Server
         /// <summary>
         /// Property that indicates whether the Kinect Server is connected to a sensor.
         /// </summary>
-        public bool IsConnected
-        {
-            get
-            {
-                return (this.kinect != null) && kinect.IsAvailable;
-            }
-        }
+        public bool IsConnected { get { return (this.kinect != null) && kinect.IsAvailable; } }
 
         /// <summary>
         /// Event that triggers when the server detects a Kinect connection or disconnecting.
         /// </summary>
-        public event EventHandler IsConnectedChanged;
+        public event EventHandler<IsConnectedChangedEventArgs> IsConnectedChanged;
 
         protected override void OnStart(string[] args)
         {
@@ -148,9 +142,9 @@ namespace PersonalRobotics.Kinect2Server
             }
         }
 
-        protected void OnAvailableChanged(object sender, EventArgs e)
+        protected void OnAvailableChanged(object sender, IsAvailableChangedEventArgs e)
         {
-            this.IsConnectedChanged(this, EventArgs.Empty);
+            this.IsConnectedChanged(this, new IsConnectedChangedEventArgs(e.IsAvailable));
         }
     }
 
@@ -172,5 +166,19 @@ namespace PersonalRobotics.Kinect2Server
             : base(message, inner)
         {
         }
+    }
+
+    /// <summary>
+    /// Event triggered where the server connects or disconnects from a Kinect.
+    /// </summary>
+    public class IsConnectedChangedEventArgs : EventArgs
+    {
+        bool isConnected;
+        public IsConnectedChangedEventArgs(bool isConnected)
+        {
+            this.isConnected = isConnected;
+        }
+
+        public bool IsConnected { get { return isConnected; } }
     }
 }
