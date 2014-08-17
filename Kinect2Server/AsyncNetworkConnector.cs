@@ -112,9 +112,16 @@ namespace PersonalRobotics.Kinect2Server
 
         public void Broadcast(byte[] data)
         {
-            foreach (Client client in this.connectedClients)
+            try
             {
-                this.Send(client, data);
+                foreach (Client client in this.connectedClients)
+                {
+                    this.Send(client, data);
+                }
+            }
+            catch
+            {
+
             }
         }
 
