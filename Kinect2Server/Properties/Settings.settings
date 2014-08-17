@@ -11,5 +11,11 @@
     <Setting Name="IrImagePort" Type="System.Int16" Scope="Application">
       <Value Profile="(Default)">9002</Value>
     </Setting>
+    <Setting Name="BodyIndexPort" Type="System.Int16" Scope="Application">
+      <Value Profile="(Default)">9003</Value>
+    </Setting>
+    <Setting Name="AudioPort" Type="System.Int16" Scope="Application">
+      <Value Profile="(Default)">9004</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

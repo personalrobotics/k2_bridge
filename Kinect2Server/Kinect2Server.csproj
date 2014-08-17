@@ -60,7 +60,11 @@
     <StartupObject>PersonalRobotics.Kinect2Server.Kinect2ServerLauncher</StartupObject>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Kinect, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=AMD64" />
+    <Reference Include="Microsoft.Kinect, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="Microsoft.Kinect.Face, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=AMD64" />
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>..\Json60r4\Bin\Net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="System" />
     <Reference Include="System.Configuration.Install" />
@@ -76,6 +80,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AsyncNetworkConnector.cs" />
+    <Compile Include="AudioContainer.cs" />
     <Compile Include="Kinect2ServerInstaller.cs">
       <SubType>Component</SubType>
     </Compile>

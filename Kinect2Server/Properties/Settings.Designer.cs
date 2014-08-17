@@ -49,5 +49,23 @@ namespace PersonalRobotics.Kinect2Server.Properties {
                 return ((short)(this["IrImagePort"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("9003")]
+        public short BodyIndexPort {
+            get {
+                return ((short)(this["BodyIndexPort"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("9004")]
+        public short AudioPort {
+            get {
+                return ((short)(this["AudioPort"]));
+            }
+        }
     }
 }

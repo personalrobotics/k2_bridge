@@ -15,16 +15,22 @@ namespace PersonalRobotics.Kinect2Server
     {
         KinectSensor kinect;
         MultiSourceFrameReader reader;
+        AudioSource audioSource;
+        AudioBeamFrameReader audioReader;
 
         AsyncNetworkConnector colorConnector;
         AsyncNetworkConnector depthConnector;
         AsyncNetworkConnector irConnector;
+        AsyncNetworkConnector bodyIndexConnector;
+        AsyncNetworkConnector audioConnector;
 
         byte[] colorArray;
         ushort[] depthArray;
         ushort[] irArray;
         byte[] byteDepthArray;
         byte[] byteIRArray;
+        AudioContainer audioContainer;
+
 
         static readonly int BYTES_PER_COLOR_PIXEL = (PixelFormats.Bgr32.BitsPerPixel + 7) / 8;
         const int BYTES_PER_DEPTH_PIXEL = 2;
@@ -66,6 +72,7 @@ namespace PersonalRobotics.Kinect2Server
 
             // Register as a handler for the image data being returned by the Kinect.
             this.reader = this.kinect.OpenMultiSourceFrameReader(FrameSourceTypes.Color | FrameSourceTypes.Depth | FrameSourceTypes.Infrared);
+            this.audioSource = this.kinect.AudioSource;
             if (this.reader == null)
             {
                 EventLog.WriteEntry("Unable to connect to Kinect data stream.");
@@ -76,6 +83,21 @@ namespace PersonalRobotics.Kinect2Server
             {
                 this.reader.MultiSourceFrameArrived += this.OnFrameArrived;
             }
+            if (this.audioSource == null)
+            {
+                EventLog.WriteEntry("Unable to open audio source on kinect");
+                ExitCode = -3;
+                throw new KinectException("Unable to connect to kinect audio source");
+            }
+            else
+            {
+                Console.WriteLine("Yay");
+                this.audioReader = this.audioSource.OpenReader();
+                if (this.audioReader == null)
+                    Console.WriteLine("Issues with audio reader");
+                this.audioReader.FrameArrived += this.onAudioFrameArrived;
+            }
+
 
             // Allocate storage for the data from the Kinect.
             this.colorArray = new byte[this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL];
@@ -83,16 +105,24 @@ namespace PersonalRobotics.Kinect2Server
             this.irArray = new ushort[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width];
             this.byteDepthArray = new byte[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL];
             this.byteIRArray = new byte[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width * BYTES_PER_IR_PIXEL];
+            this.audioContainer = new AudioContainer();
+            this.audioContainer.samplingFrequency = 16000;
+            this.audioContainer.frameLifeTime = 0.016;
+            this.audioContainer.numSamplesPerFrame = (int)(this.audioContainer.samplingFrequency * this.audioContainer.frameLifeTime);
+            this.audioContainer.numBytesPerSample = sizeof(float);
+
 
             // Create network connectors that will send out the data when it is received.
             this.colorConnector = new AsyncNetworkConnector(Properties.Settings.Default.RgbImagePort);
             this.depthConnector = new AsyncNetworkConnector(Properties.Settings.Default.DepthImagePort);
             this.irConnector = new AsyncNetworkConnector(Properties.Settings.Default.IrImagePort);
+            this.audioConnector = new AsyncNetworkConnector(Properties.Settings.Default.AudioPort);
 
             // Open the server connections.
             this.colorConnector.Listen();
             this.depthConnector.Listen();
             this.irConnector.Listen();
+            this.audioConnector.Listen();
         }
 
         protected override void OnStop()
@@ -101,11 +131,13 @@ namespace PersonalRobotics.Kinect2Server
             this.colorConnector.Close();
             this.depthConnector.Close();
             this.irConnector.Close();
+            this.audioConnector.Close();
 
             this.reader.Dispose(); // TODO: Is this actually necessary?
             this.colorConnector.Dispose();
             this.depthConnector.Dispose();
             this.irConnector.Dispose();
+            this.audioConnector.Dispose();
         }
 
         private void OnFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
@@ -125,7 +157,7 @@ namespace PersonalRobotics.Kinect2Server
             {
                 if (depthFrame != null)
                 {
-                    depthFrame.CopyFrameDataToArray(this.depthArray);   //Ushort Array ! Use BitConverter.getBytes() to convert to two bytes per each uShort. it gives low byte followed by high byte
+                    depthFrame.CopyFrameDataToArray(this.depthArray);
                     System.Buffer.BlockCopy(this.depthArray, 0, this.byteDepthArray, 0, this.byteDepthArray.Length);
                     this.depthConnector.Broadcast(this.byteDepthArray);
                 }
@@ -135,10 +167,28 @@ namespace PersonalRobotics.Kinect2Server
             {
                 if (irFrame != null)
                 {
-                    irFrame.CopyFrameDataToArray(this.irArray);     //Ushort Array ! Use BitConverter.getBytes() to convert to two bytes per each uShort. it gives low byte followed by high byte
+                    irFrame.CopyFrameDataToArray(this.irArray);
                     System.Buffer.BlockCopy(this.irArray, 0, this.byteIRArray, 0, this.byteIRArray.Length);
                     this.irConnector.Broadcast(this.byteIRArray);
                 }
+            }
+        }
+
+        private void onAudioFrameArrived(object sender,AudioBeamFrameArrivedEventArgs e)
+        {
+            AudioBeamFrameReference audioFrameRefrence = e.FrameReference;
+            try
+            {
+                Console.WriteLine("Oye");
+                AudioBeamFrameList frameList = audioFrameRefrence.AcquireBeamFrames();
+                if (frameList != null)
+                {
+                    Console.WriteLine("Yo, Thre was a audio event");
+                }
+            }
+            catch
+            {
+
             }
         }
 
