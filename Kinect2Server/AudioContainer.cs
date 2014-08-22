@@ -9,9 +9,10 @@ namespace PersonalRobotics.Kinect2Server
 {
     struct AudioContainer
     {
+        public double utcTime;
         public float beamAngle;
         public float beamAngleConfidence;
-        public byte[] audioStream;
+        public float[] audioStream;
         public int numBytesPerSample;
         public int numSamplesPerFrame;
         public double frameLifeTime;

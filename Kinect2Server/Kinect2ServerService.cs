@@ -29,6 +29,7 @@ namespace PersonalRobotics.Kinect2Server
         byte[] colorArray;
         ushort[] depthArray;
         ushort[] irArray;
+        byte[] byteColorArray;
         byte[] byteDepthArray;
         byte[] byteIRArray;
         Body[] bodyArray;
@@ -103,18 +104,19 @@ namespace PersonalRobotics.Kinect2Server
 
 
             // Allocate storage for the data from the Kinect.
-            this.colorArray = new byte[this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL];
+            this.colorArray = new byte[(this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL)];
             this.depthArray = new ushort[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width];
             this.irArray = new ushort[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width];
-            this.byteDepthArray = new byte[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL];
-            this.byteIRArray = new byte[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width * BYTES_PER_IR_PIXEL];
+            this.byteColorArray = new byte[(this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL) + sizeof(double)];
+            this.byteDepthArray = new byte[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL + sizeof(double)];
+            this.byteIRArray = new byte[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width * BYTES_PER_IR_PIXEL + sizeof(double)];
             this.bodyArray = new Body[this.kinect.BodyFrameSource.BodyCount];
             this.audioContainer = new AudioContainer();
             this.audioContainer.samplingFrequency = 16000;
             this.audioContainer.frameLifeTime = 0.016;
             this.audioContainer.numSamplesPerFrame = (int)(this.audioContainer.samplingFrequency * this.audioContainer.frameLifeTime);
             this.audioContainer.numBytesPerSample = sizeof(float);
-            this.audioContainer.audioStream = new byte[this.audioSource.SubFrameLengthInBytes];
+            this.audioContainer.audioStream = new float[256];
             
             // Create network connectors that will send out the data when it is received.
             this.colorConnector = new AsyncNetworkConnector(Properties.Settings.Default.RgbImagePort);
@@ -151,13 +153,16 @@ namespace PersonalRobotics.Kinect2Server
 
         private void OnFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
         {
+            double utcTime = (DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
             MultiSourceFrame multiSourceFrame = e.FrameReference.AcquireFrame();
             using (ColorFrame colorFrame = multiSourceFrame.ColorFrameReference.AcquireFrame())
             {
                 if (colorFrame != null)
                 {
                     colorFrame.CopyConvertedFrameDataToArray(this.colorArray, ColorImageFormat.Bgra);
-                    this.colorConnector.Broadcast(this.colorArray);
+                    System.Buffer.BlockCopy(this.colorArray, 0, this.byteColorArray,0,(this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL));
+                    System.Buffer.BlockCopy(BitConverter.GetBytes(utcTime), 0, this.byteColorArray, (this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL), sizeof(double));
+                    this.colorConnector.Broadcast(this.byteColorArray);
                 }
             }
 
@@ -166,7 +171,8 @@ namespace PersonalRobotics.Kinect2Server
                 if (depthFrame != null)
                 {
                     depthFrame.CopyFrameDataToArray(this.depthArray);
-                    System.Buffer.BlockCopy(this.depthArray, 0, this.byteDepthArray, 0, this.byteDepthArray.Length);
+                    System.Buffer.BlockCopy(this.depthArray, 0, this.byteDepthArray, 0, this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL);
+                    System.Buffer.BlockCopy(BitConverter.GetBytes(utcTime), 0, this.byteDepthArray, this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL,sizeof(double));
                     this.depthConnector.Broadcast(this.byteDepthArray);
                 }
             }
@@ -176,7 +182,8 @@ namespace PersonalRobotics.Kinect2Server
                 if (irFrame != null)
                 {
                     irFrame.CopyFrameDataToArray(this.irArray);
-                    System.Buffer.BlockCopy(this.irArray, 0, this.byteIRArray, 0, this.byteIRArray.Length);
+                    System.Buffer.BlockCopy(this.irArray, 0, this.byteIRArray, 0, this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width * BYTES_PER_IR_PIXEL);
+                    System.Buffer.BlockCopy(BitConverter.GetBytes(utcTime), 0, this.byteIRArray, this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width * BYTES_PER_IR_PIXEL, sizeof(double));
                     this.irConnector.Broadcast(this.byteIRArray);
                 }
             }
@@ -187,8 +194,14 @@ namespace PersonalRobotics.Kinect2Server
                 {
                     bodyFrame.GetAndRefreshBodyData(this.bodyArray);
                     string jsonString = JsonConvert.SerializeObject(this.bodyArray);
-                    byte[] bodyByteArray = new byte[jsonString.Length*sizeof(char)];
-                    System.Buffer.BlockCopy(jsonString.ToCharArray(), 0, bodyByteArray, 0, bodyByteArray.Length);
+                    int diff = 28000 - jsonString.Length;
+                    for (int i = 0; i < diff;i++ )
+                    {
+                        jsonString += " ";
+                    }
+                    byte[] bodyByteArray = new byte[jsonString.Length*sizeof(char) + sizeof(double)];
+                    System.Buffer.BlockCopy(jsonString.ToCharArray(), 0, bodyByteArray, 0, jsonString.Length * sizeof(char));
+                    System.Buffer.BlockCopy(BitConverter.GetBytes(utcTime), 0, bodyByteArray, jsonString.Length * sizeof(char),sizeof(double));
                     this.bodyConnector.Broadcast(bodyByteArray);
                 }
             }
@@ -204,22 +217,28 @@ namespace PersonalRobotics.Kinect2Server
                 {
                     using (frameList)
                     {
-                        // Only one audio beam is supported. Get the sub frame list for this beam
                         IReadOnlyList<AudioBeamSubFrame> subFrameList = frameList[0].SubFrames;
 
-                        // Loop over all sub frames, extract audio buffer and beam information
                         foreach (AudioBeamSubFrame subFrame in subFrameList)
                         {
-                            // Check if beam angle and/or confidence have changed
+                            this.audioContainer.utcTime = (DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
                             this.audioContainer.beamAngle = subFrame.BeamAngle;
                             this.audioContainer.beamAngleConfidence = subFrame.BeamAngleConfidence;
+                            byte[] array = new byte[this.audioSource.SubFrameLengthInBytes];
+                            subFrame.CopyFrameDataToArray(array);
+                            for (int i = 0; i < array.Length;i+=sizeof(float))
+                            {
+                                audioContainer.audioStream[(int)(i / sizeof(float))] = BitConverter.ToSingle(array, i);
+                            }
                             string jsonString = JsonConvert.SerializeObject(this.audioContainer);
-                            byte[] jsonBytes = new byte[jsonString.Length * sizeof(char)];
-                            System.Buffer.BlockCopy(jsonString.ToCharArray(), 0, jsonBytes, 0,jsonBytes.Length);
-                            audioConnector.Broadcast(jsonBytes);
-
-                            // Process audio buffer
-                            subFrame.CopyFrameDataToArray(this.audioContainer.audioStream);
+                            int diff = 4100 - jsonString.Length;
+                            for (int i = 0; i < diff;i++)
+                            {
+                                jsonString += " ";
+                            }
+                            byte[] transmittedData = new byte[jsonString.Length*sizeof(char)];
+                            System.Buffer.BlockCopy(jsonString.ToCharArray(), 0, transmittedData, 0, transmittedData.Length);
+                            this.audioConnector.Broadcast(transmittedData);
                             subFrame.Dispose();
                         }
                     }
