@@ -1,0 +1,12 @@
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\bin\x64\Release\Kinect2Server.exe.config
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\bin\x64\Release\Kinect2Server.exe
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\bin\x64\Release\Kinect2Server.pdb
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\bin\x64\Release\Microsoft.Kinect.Face.dll
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\bin\x64\Release\Newtonsoft.Json.dll
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\bin\x64\Release\Microsoft.Kinect.Face.xml
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\obj\x64\Release\Kinect2Server.csprojResolveAssemblyReference.cache
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\obj\x64\Release\Kinect2Server.g.resources
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\obj\x64\Release\PersonalRobotics.Kinect2Server.Properties.Resources.resources
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\obj\x64\Release\Kinect2Server.csproj.GenerateResource.Cache
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\obj\x64\Release\Kinect2Server.exe
+C:\Users\prdemo\Documents\k2_server\Kinect2Server\obj\x64\Release\Kinect2Server.pdb
