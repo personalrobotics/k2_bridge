@@ -19,27 +19,27 @@ A) Install windows as you would on a regular machine.
 
 B) Download and install Microsoft Visual Studio Express 2013 for Windows Desktop from following link. Make sure to download the version for Windows desktop and not others.
 
-MS Visual Studio:
+MS Visual Studio
 ~~~~~~~~~~~~~~~~
 https://app.vssps.visualstudio.com/profile/review?download=true&slcid=0x409&context=eyJwZSI6MSwicGMiOjEsImljIjoxLCJhbyI6MSwiYW0iOjAsIm9wIjpudWxsLCJhZCI6bnVsbCwiZmEiOjAsImF1IjpudWxsLCJjdiI6OTQ0Njg4NjIzLCJmcyI6MCwic3UiOjAsImVyIjoxfQ2
 
 C) Download and install the kinect SDK from following link.
 
-Kinect SDK:
+Kinect SDK
 ~~~~~~~~~~
 http://www.microsoft.com/en-us/download/details.aspx?id=43661
 
 
 D) Download the k2_server software from following page and extract it to any location of your choice.
 
-k2_server source:
+k2_server source
 ~~~~~~~~~~~~~~~~~
 
 E) Connect the Kinect to the USB-3.0 port of the windows machine and start one of the sample applications to check if everything is working. If the sample don't run, refer to MSDN for troubleshooting tips. Once done, close all the kinect applications.
 
 F) Disable IPv6 on the machine by following the instructions on following page.
 
-DisableIPv6:
+DisableIPv6
 ~~~~~~~~~~~
 http://www.techunboxed.com/2012/08/how-to-disable-ipv6-in-windows-8.html
 
@@ -57,7 +57,7 @@ A) Install windows as you would on a regular machine.
 
 B) Download the binaries from following link and extract it to any location of you choice
 
-k2_server binaries:
+k2_server binaries
 ~~~~~~~~~~~~~~~~~~
 
 C) Disable IPv6 on the machine by following the instructions on this page.
