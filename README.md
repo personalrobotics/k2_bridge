@@ -24,6 +24,7 @@ C) Download and install the kinect SDK from following link.
 Kinect SDK: http://www.microsoft.com/en-us/download/details.aspx?id=43661
 
 D) Download the k2_server software from following page and extract it to any location of your choice.
+
 k2_server source: https://github.com/personalrobotics/k2_server
 
 E) Connect the Kinect to the USB-3.0 port of the windows machine and start one of the sample applications to check if everything is working. If the sample don't run, refer to MSDN for troubleshooting tips. Once done, close all the kinect applications.
@@ -44,8 +45,7 @@ A) Install windows as you would on a regular machine.
 
 B) Download the binaries from following link and extract it to any location of you choice
 
-k2_server binaries
-~~~~~~~~~~~~~~~~~~
+k2_server binaries:
 
 C) Disable IPv6 on the machine by following the instructions on this page.
 
