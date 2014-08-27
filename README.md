@@ -45,7 +45,7 @@ A) Install windows as you would on a regular machine.
 
 B) Download the binaries from following link and extract it to any location of you choice
 
-k2_server binaries: https://github.com/personalrobotics/k2_server/tree/Binaries/Kinect2Server/bin/x64/Release
+k2_server binaries: https://github.com/personalrobotics/k2_server/tree/Binaries
 
 C) Disable IPv6 on the machine by following the instructions on this page.
 
