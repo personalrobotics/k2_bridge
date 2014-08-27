@@ -20,7 +20,7 @@ A) Install windows as you would on a regular machine.
 B) Download and install Microsoft Visual Studio Express 2013 for Windows Desktop from following link. Make sure to download the version for Windows desktop and not others.
 
 MS Visual Studio:
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 https://app.vssps.visualstudio.com/profile/review?download=true&slcid=0x409&context=eyJwZSI6MSwicGMiOjEsImljIjoxLCJhbyI6MSwiYW0iOjAsIm9wIjpudWxsLCJhZCI6bnVsbCwiZmEiOjAsImF1IjpudWxsLCJjdiI6OTQ0Njg4NjIzLCJmcyI6MCwic3UiOjAsImVyIjoxfQ2
 
 C) Download and install the kinect SDK from following link.
