@@ -43,7 +43,7 @@ I) To run, simply click on start button or run the kinect2server.exe executable 
 
 A) Install windows as you would on a regular machine.
 
-B) Download the binaries from following link and extract it to any location of you choice. Ensure to download the binaries and not the source code.
+B) Download the binaries from following link and extract it to any location of you choice. Ensure to download the binaries and not the source code. Also download and install the kinect SDK from [here](http://www.microsoft.com/en-us/download/details.aspx?id=43661)
 
 k2_server binaries: https://github.com/personalrobotics/k2_server/releases
 
