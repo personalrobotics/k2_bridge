@@ -67,5 +67,16 @@ namespace PersonalRobotics.Kinect2Server.Properties {
                 return ((short)(this["AudioPort"]));
             }
         }
+
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("9005")]
+        public short PointCloudPort
+        {
+            get
+            {
+                return ((short)(this["PointCloudPort"]));
+            }
+        }
     }
 }
