@@ -30,6 +30,7 @@ using System.ServiceProcess;
 using System.Windows.Media;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using System.IO;
 
 namespace PersonalRobotics.Kinect2Server
 {
@@ -50,10 +51,13 @@ namespace PersonalRobotics.Kinect2Server
         AsyncNetworkConnector irConnector;
         AsyncNetworkConnector bodyConnector;
         AsyncNetworkConnector audioConnector;
+        AsyncNetworkConnector pointConnector;
 
         byte[] colorArray;
         ushort[] depthArray;
         ushort[] irArray;
+        CameraSpacePoint[] pointArray;
+
         byte[] byteColorArray;
         byte[] byteDepthArray;
         byte[] byteIRArray;
@@ -64,6 +68,7 @@ namespace PersonalRobotics.Kinect2Server
         static readonly int BYTES_PER_COLOR_PIXEL = (PixelFormats.Bgr32.BitsPerPixel + 7) / 8;
         const int BYTES_PER_DEPTH_PIXEL = 2;
         const int BYTES_PER_IR_PIXEL = 2;
+        const int BYTES_PER_3D_POINT = 3 * sizeof(float);
 
         public Kinect2ServerService()
         {
@@ -132,10 +137,13 @@ namespace PersonalRobotics.Kinect2Server
             this.colorArray = new byte[(this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL)];
             this.depthArray = new ushort[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width];
             this.irArray = new ushort[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width];
+            this.pointArray = new CameraSpacePoint[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width];
+
             this.byteColorArray = new byte[(this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL) + sizeof(double)];
             this.byteDepthArray = new byte[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL + sizeof(double)];
             this.byteIRArray = new byte[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width * BYTES_PER_IR_PIXEL + sizeof(double)];
             this.bodyArray = new Body[this.kinect.BodyFrameSource.BodyCount];
+
             this.audioContainer = new AudioContainer();
             this.audioContainer.samplingFrequency = 16000;
             this.audioContainer.frameLifeTime = 0.016;
@@ -149,6 +157,7 @@ namespace PersonalRobotics.Kinect2Server
             this.irConnector = new AsyncNetworkConnector(Properties.Settings.Default.IrImagePort);
             this.bodyConnector = new AsyncNetworkConnector(Properties.Settings.Default.BodyPort);
             this.audioConnector = new AsyncNetworkConnector(Properties.Settings.Default.AudioPort);
+            this.pointConnector = new AsyncNetworkConnector(Properties.Settings.Default.PointCloudPort);
 
             // Open the server connections.
             this.colorConnector.Listen();
@@ -156,6 +165,8 @@ namespace PersonalRobotics.Kinect2Server
             this.irConnector.Listen();
             this.bodyConnector.Listen();
             this.audioConnector.Listen();
+            this.pointConnector.Listen();
+            
         }
 
         protected override void OnStop()
@@ -166,6 +177,7 @@ namespace PersonalRobotics.Kinect2Server
             this.irConnector.Close();
             this.bodyConnector.Close();
             this.audioConnector.Close();
+            this.pointConnector.Close();
 
             this.reader.Dispose(); // TODO: Is this actually necessary?
             this.audioReader.Dispose();
@@ -174,6 +186,7 @@ namespace PersonalRobotics.Kinect2Server
             this.irConnector.Dispose();
             this.bodyConnector.Dispose();
             this.audioConnector.Dispose();
+            this.pointConnector.Dispose();
         }
 
         private void OnFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
@@ -199,6 +212,22 @@ namespace PersonalRobotics.Kinect2Server
                     System.Buffer.BlockCopy(this.depthArray, 0, this.byteDepthArray, 0, this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL);
                     System.Buffer.BlockCopy(BitConverter.GetBytes(utcTime), 0, this.byteDepthArray, this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL,sizeof(double));
                     this.depthConnector.Broadcast(this.byteDepthArray);
+
+                    // Generate point cloud from depth image
+                    this.kinect.CoordinateMapper.MapDepthFrameToCameraSpace(this.depthArray, pointArray);
+
+                    // Write the point cloud to a buffer
+                    using (MemoryStream stream = new MemoryStream(this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_3D_POINT))
+                    {
+                        foreach (CameraSpacePoint csp in pointArray)
+                        {
+                            stream.Write(BitConverter.GetBytes(csp.X), 0, sizeof(float));
+                            stream.Write(BitConverter.GetBytes(csp.Y), 0, sizeof(float));
+                            stream.Write(BitConverter.GetBytes(csp.Z), 0, sizeof(float));
+                        }
+                        stream.Write(BitConverter.GetBytes(utcTime), 0, sizeof(double));
+                        this.pointConnector.Broadcast(stream.ToArray());
+                    }
                 }
             }
 
