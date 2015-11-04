@@ -128,7 +128,7 @@ namespace PersonalRobotics.Kinect2Server
                     Console.WriteLine("Skipping send to client: " + client.socket.RemoteEndPoint);
                 }
             }
-            catch (SocketException e)
+            catch (SocketException)
             {
                 Console.WriteLine("Disconnected from: " + client.socket.RemoteEndPoint);
                 client.socket.Close();
