@@ -24,7 +24,7 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF TH
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************************************/
 using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -57,9 +57,8 @@ namespace PersonalRobotics.Kinect2Server
     /// </summary>
     public sealed class AsyncNetworkConnector : IDisposable
     {
-        public SynchronizedCollection<Client> connectedClients =
-            new SynchronizedCollection<Client>();
-        
+        ArrayList connectedClients = ArrayList.Synchronized(new ArrayList());
+
         public readonly int port;
         readonly int concurrentSends;
         readonly Socket listenerSocket;
@@ -88,12 +87,12 @@ namespace PersonalRobotics.Kinect2Server
                 AsyncNetworkConnector connector = (AsyncNetworkConnector)ar.AsyncState;
                 Socket socket = connector.listenerSocket.EndAccept(ar);
                 connector.connectedClients.Add(new Client(socket, this.concurrentSends));
-                Console.WriteLine("Added client: " + socket.ToString()); // TODO: put this in the event log instead.
                 connector.listenerSocket.BeginAccept(new AsyncCallback(OnAccept), connector);
+                Console.WriteLine("Connected to: " + socket.RemoteEndPoint); // TODO: put this in the event log instead.
             }
-            catch (Exception e)
+            catch (SocketException e)
             {
-                Console.WriteLine("Error accepting client: " + e.ToString());
+                Console.WriteLine("Error accepting client: " + e);
             }
         }
 
@@ -108,9 +107,9 @@ namespace PersonalRobotics.Kinect2Server
                     client.sends.Release();
                 }
             }
-            catch (Exception e)
+            catch (SocketException)
             {
-                Console.WriteLine("Error in send callback: " + e.ToString());
+                Console.WriteLine("Disconnected from: " + client.socket.RemoteEndPoint);
                 client.socket.Close();
                 this.connectedClients.Remove(client);
             }
@@ -126,12 +125,12 @@ namespace PersonalRobotics.Kinect2Server
                 }
                 else
                 {
-                    Console.WriteLine("Skipping send to client: " + client.socket.ToString());
+                    Console.WriteLine("Skipping send to client: " + client.socket.RemoteEndPoint);
                 }
             }
-            catch (Exception e)
+            catch (SocketException e)
             {
-                Console.WriteLine("Error in send: " + e.ToString());
+                Console.WriteLine("Disconnected from: " + client.socket.RemoteEndPoint);
                 client.socket.Close();
                 this.connectedClients.Remove(client);
             }
@@ -140,9 +139,13 @@ namespace PersonalRobotics.Kinect2Server
         public void Broadcast(byte[] data)
         {
             // Send the data to every connected client.
-            foreach (Client client in this.connectedClients)
+            lock (this.connectedClients.SyncRoot)
             {
-                this.Send(client, data);
+                // Copy the array here, since some clients might get dropped during iteration.
+                foreach (Client client in this.connectedClients.ToArray())
+                {
+                    this.Send(client, data);
+                }
             }
         }
 
@@ -152,26 +155,35 @@ namespace PersonalRobotics.Kinect2Server
             this.listenerSocket.Close();
 
             // Close each client socket.
-            foreach (Client client in this.connectedClients)
+            lock (this.connectedClients.SyncRoot)
             {
-                try
+                foreach (Client client in this.connectedClients)
                 {
-                    client.socket.Shutdown(SocketShutdown.Both);
-                    client.socket.Close();
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine("Error in closing: " + e.ToString());
+                    try
+                    {
+                        client.socket.Shutdown(SocketShutdown.Both);
+                        client.socket.Close();
+                    }
+                    catch (SocketException e)
+                    {
+                        Console.WriteLine("Error closing socket: " + e);
+                    }
                 }
             }
         }
 
         public void Dispose()
         {
+            // Dispose of the main listener socket.
             this.listenerSocket.Dispose();
-            foreach (Client client in this.connectedClients)
+
+            // Dispose of each client socket.
+            lock (this.connectedClients.SyncRoot)
             {
-                client.Dispose();
+                foreach (Client client in this.connectedClients)
+                {
+                    client.Dispose();
+                }
             }
         }
     }

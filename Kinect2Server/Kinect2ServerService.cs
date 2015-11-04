@@ -28,9 +28,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.ServiceProcess;
-using System.IO;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using System.Windows.Media;
 
 namespace PersonalRobotics.Kinect2Server
 {
@@ -170,27 +170,23 @@ namespace PersonalRobotics.Kinect2Server
                 {
                     if (colorFrame != null)
                     {
-                        if (colorFrame.RawColorImageFormat == ColorImageFormat.Bgra)
-                        {
-                            // Allocate a new byte buffer to store this RGB frame and timestamp.
-                            var colorArraySize = colorFrame.ColorFrameSource.FrameDescription.Height *
-                                                 colorFrame.ColorFrameSource.FrameDescription.Width *
-                                                 colorFrame.ColorFrameSource.FrameDescription.BytesPerPixel;
-                            var colorBuffer = new byte[colorArraySize + sizeof(long)];
+                        // Allocate a new byte buffer to store this RGB frame and timestamp.
+                        var colorArraySize = colorFrame.ColorFrameSource.FrameDescription.Height *
+                                             colorFrame.ColorFrameSource.FrameDescription.Width *
+                                             4; //  (PixelFormats.Bgr32.BitsPerPixel + 7) / 8;
+                        var colorBuffer = new byte[colorArraySize + sizeof(long)];
 
-                            // Convert the color frame into the byte buffer.
-                            colorFrame.CopyConvertedFrameDataToArray(colorBuffer, ColorImageFormat.Bgra);
+                        // Convert the depth frame into the byte buffer.
+                        GCHandle colorBufferHandle = GCHandle.Alloc(colorBuffer, GCHandleType.Pinned);
+                        IntPtr colorBufferAddress = colorBufferHandle.AddrOfPinnedObject();
+                        colorFrame.CopyConvertedFrameDataToIntPtr(colorBufferAddress, (uint)colorArraySize, ColorImageFormat.Bgra);
+                        colorBufferHandle.Free();
 
-                            // Append the system timestamp to the end of the buffer.
-                            System.Buffer.BlockCopy(timestampBytes, 0, colorBuffer, (int)colorArraySize, sizeof(long));
+                        // Append the system timestamp to the end of the buffer.
+                        System.Buffer.BlockCopy(timestampBytes, 0, colorBuffer, (int)colorArraySize, sizeof(long));
 
-                            // Transmit the byte buffer to color clients.
-                            this.colorConnector.Broadcast(colorBuffer);
-                        }
-                        else
-                        {
-                            EventLog.WriteEntry("Received color frame of unexpected format: " + colorFrame.RawColorImageFormat);
-                        }
+                        // Transmit the byte buffer to color clients.
+                        this.colorConnector.Broadcast(colorBuffer);
                     }
                 }
             }
@@ -261,12 +257,9 @@ namespace PersonalRobotics.Kinect2Server
                         var bodyArray = new Body[this.kinect.BodyFrameSource.BodyCount];
                         bodyFrame.GetAndRefreshBodyData(bodyArray);
 
-                        using (MemoryStream stream = new MemoryStream())
-                        {
-                            string json = JsonConvert.SerializeObject(bodyArray);
-                            byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
-                            this.bodyConnector.Broadcast(bytes);
-                        }
+                        string json = JsonConvert.SerializeObject(bodyArray) + "\n";
+                        byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
+                        this.bodyConnector.Broadcast(bytes);
                     }
                 }
             }
@@ -316,7 +309,7 @@ namespace PersonalRobotics.Kinect2Server
                             audioContainer.audioStream[(int)(i / sizeof(float))] = BitConverter.ToSingle(array, i);
                         }
 
-                        string json = JsonConvert.SerializeObject(audioContainer);
+                        string json = JsonConvert.SerializeObject(audioContainer) + "\n";
                         byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
                         this.audioConnector.Broadcast(bytes);
                     }
