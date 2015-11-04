@@ -25,7 +25,6 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************************************/
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -35,7 +34,7 @@ namespace PersonalRobotics.Kinect2Server
     /// <summary>
     /// Contains bookkeeping information for a TCP socket client.
     /// </summary>
-    public class Client : IDisposable
+    public sealed class Client : IDisposable
     {
         public readonly Socket socket;
         public readonly Semaphore sends;
@@ -56,18 +55,22 @@ namespace PersonalRobotics.Kinect2Server
     /// <summary>
     /// Defines a network connector that allows multiple subscribers to a binary data stream.
     /// </summary>
-    public class AsyncNetworkConnector : IDisposable
+    public sealed class AsyncNetworkConnector : IDisposable
     {
         public SynchronizedCollection<Client> connectedClients =
             new SynchronizedCollection<Client>();
         
         public readonly int port;
-        protected readonly Socket listenerSocket;
+        readonly int concurrentSends;
+        readonly Socket listenerSocket;
 
-        public AsyncNetworkConnector(int port, int concurrentSends = 34)
+        public bool HasClients { get { return connectedClients.Count > 0; } }
+
+        public AsyncNetworkConnector(int port, int concurrentSends = 3)
         {
             this.listenerSocket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.port = port;
+            this.concurrentSends = concurrentSends;
         }
 
         public void Listen()
@@ -84,13 +87,13 @@ namespace PersonalRobotics.Kinect2Server
             {
                 AsyncNetworkConnector connector = (AsyncNetworkConnector)ar.AsyncState;
                 Socket socket = connector.listenerSocket.EndAccept(ar);
-                connector.connectedClients.Add(new Client(socket, 3));
-                Console.WriteLine("Added socket to client list"); // TODO: put this in the event log instead.
+                connector.connectedClients.Add(new Client(socket, this.concurrentSends));
+                Console.WriteLine("Added client: " + socket.ToString()); // TODO: put this in the event log instead.
                 connector.listenerSocket.BeginAccept(new AsyncCallback(OnAccept), connector);
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error in startListeningCallBack: " + e.ToString());
+                Console.WriteLine("Error accepting client: " + e.ToString());
             }
         }
 
@@ -107,7 +110,7 @@ namespace PersonalRobotics.Kinect2Server
             }
             catch (Exception e)
             {
-                Console.WriteLine("Error in sendCallBack: " + e.ToString());
+                Console.WriteLine("Error in send callback: " + e.ToString());
                 client.socket.Close();
                 this.connectedClients.Remove(client);
             }
@@ -119,13 +122,12 @@ namespace PersonalRobotics.Kinect2Server
             {
                 if (client.sends.WaitOne(0))
                 {
-                    client.socket.BeginSend(data, 0, data.Length, 0, new AsyncCallback(this.OnSend), client);
+                    client.socket.BeginSend(data, 0, data.Length, SocketFlags.None, new AsyncCallback(this.OnSend), client);
                 }
                 else
                 {
-                    Console.WriteLine("Skipping send.");
+                    Console.WriteLine("Skipping send to client: " + client.socket.ToString());
                 }
-
             }
             catch (Exception e)
             {
@@ -137,16 +139,10 @@ namespace PersonalRobotics.Kinect2Server
 
         public void Broadcast(byte[] data)
         {
-            try
+            // Send the data to every connected client.
+            foreach (Client client in this.connectedClients)
             {
-                foreach (Client client in this.connectedClients)
-                {
-                    this.Send(client, data);
-                }
-            }
-            catch
-            {
-
+                this.Send(client, data);
             }
         }
 

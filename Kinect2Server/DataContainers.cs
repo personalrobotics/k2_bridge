@@ -23,18 +23,11 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT
 TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF 
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************************************/
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json;
-
 namespace PersonalRobotics.Kinect2Server
 {
     struct AudioContainer
     {
-        public double utcTime;
+        public long timestamp;
         public float beamAngle;
         public float beamAngleConfidence;
         public float[] audioStream;

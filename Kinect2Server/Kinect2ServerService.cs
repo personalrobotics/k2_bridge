@@ -25,10 +25,11 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************************************/
 using Microsoft.Kinect;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.ServiceProcess;
-using System.Windows.Media;
-using System.Collections.Generic;
+using System.IO;
+using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 
 namespace PersonalRobotics.Kinect2Server
@@ -50,20 +51,6 @@ namespace PersonalRobotics.Kinect2Server
         AsyncNetworkConnector irConnector;
         AsyncNetworkConnector bodyConnector;
         AsyncNetworkConnector audioConnector;
-
-        byte[] colorArray;
-        ushort[] depthArray;
-        ushort[] irArray;
-        byte[] byteColorArray;
-        byte[] byteDepthArray;
-        byte[] byteIRArray;
-        Body[] bodyArray;
-        AudioContainer audioContainer;
-
-
-        static readonly int BYTES_PER_COLOR_PIXEL = (PixelFormats.Bgr32.BitsPerPixel + 7) / 8;
-        const int BYTES_PER_DEPTH_PIXEL = 2;
-        const int BYTES_PER_IR_PIXEL = 2;
 
         public Kinect2ServerService()
         {
@@ -101,7 +88,6 @@ namespace PersonalRobotics.Kinect2Server
 
             // Register as a handler for the image data being returned by the Kinect.
             this.reader = this.kinect.OpenMultiSourceFrameReader(FrameSourceTypes.Color | FrameSourceTypes.Depth | FrameSourceTypes.Infrared | FrameSourceTypes.Body);
-            this.audioSource = this.kinect.AudioSource;
             if (this.reader == null)
             {
                 EventLog.WriteEntry("Unable to connect to Kinect data stream.");
@@ -112,37 +98,29 @@ namespace PersonalRobotics.Kinect2Server
             {
                 this.reader.MultiSourceFrameArrived += this.OnFrameArrived;
             }
+
+            // Register as a handler for the audio source data being returned by the Kinect.
+            this.audioSource = this.kinect.AudioSource;
             if (this.audioSource == null)
             {
-                EventLog.WriteEntry("Unable to open audio source on kinect");
+                EventLog.WriteEntry("Unable to connect to Kinect audio source.");
                 ExitCode = -3;
-                throw new KinectException("Unable to connect to kinect audio source");
+                throw new KinectException("Unable to connect to Kinect audio source.");
+            }
+
+            // Register as a handler for the audio reader data being returned by the Kinect.
+            this.audioReader = this.audioSource.OpenReader();
+            if (this.audioReader == null)
+            {
+                EventLog.WriteEntry("Unable to create reader for Kinect audio source.");
+                ExitCode = -4;
+                throw new KinectException("Unable to create reader for Kinect audio source.");
             }
             else
             {
-                this.audioReader = this.audioSource.OpenReader();
-                if (this.audioReader == null)
-                    Console.WriteLine("Issues with audio reader");
-                else
-                    this.audioReader.FrameArrived += this.onAudioFrameArrived;
+                this.audioReader.FrameArrived += this.onAudioFrameArrived;
             }
 
-
-            // Allocate storage for the data from the Kinect.
-            this.colorArray = new byte[(this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL)];
-            this.depthArray = new ushort[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width];
-            this.irArray = new ushort[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width];
-            this.byteColorArray = new byte[(this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL) + sizeof(double)];
-            this.byteDepthArray = new byte[this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL + sizeof(double)];
-            this.byteIRArray = new byte[this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width * BYTES_PER_IR_PIXEL + sizeof(double)];
-            this.bodyArray = new Body[this.kinect.BodyFrameSource.BodyCount];
-            this.audioContainer = new AudioContainer();
-            this.audioContainer.samplingFrequency = 16000;
-            this.audioContainer.frameLifeTime = 0.016;
-            this.audioContainer.numSamplesPerFrame = (int)(this.audioContainer.samplingFrequency * this.audioContainer.frameLifeTime);
-            this.audioContainer.numBytesPerSample = sizeof(float);
-            this.audioContainer.audioStream = new float[256];
-            
             // Create network connectors that will send out the data when it is received.
             this.colorConnector = new AsyncNetworkConnector(Properties.Settings.Default.RgbImagePort);
             this.depthConnector = new AsyncNetworkConnector(Properties.Settings.Default.DepthImagePort);
@@ -167,7 +145,7 @@ namespace PersonalRobotics.Kinect2Server
             this.bodyConnector.Close();
             this.audioConnector.Close();
 
-            this.reader.Dispose(); // TODO: Is this actually necessary?
+            this.reader.Dispose();
             this.audioReader.Dispose();
             this.colorConnector.Dispose();
             this.depthConnector.Dispose();
@@ -178,100 +156,171 @@ namespace PersonalRobotics.Kinect2Server
 
         private void OnFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
         {
-            double utcTime = (DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
+            // Acquire current Kinect frame reference.
             MultiSourceFrame multiSourceFrame = e.FrameReference.AcquireFrame();
-            using (ColorFrame colorFrame = multiSourceFrame.ColorFrameReference.AcquireFrame())
-            {
-                if (colorFrame != null)
-                {
-                    colorFrame.CopyConvertedFrameDataToArray(this.colorArray, ColorImageFormat.Bgra);
-                    System.Buffer.BlockCopy(this.colorArray, 0, this.byteColorArray,0,(this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL));
-                    System.Buffer.BlockCopy(BitConverter.GetBytes(utcTime), 0, this.byteColorArray, (this.kinect.ColorFrameSource.FrameDescription.Height * this.kinect.ColorFrameSource.FrameDescription.Width * BYTES_PER_COLOR_PIXEL), sizeof(double));
-                    this.colorConnector.Broadcast(this.byteColorArray);
-                }
-            }
 
-            using (DepthFrame depthFrame = multiSourceFrame.DepthFrameReference.AcquireFrame())
-            {
-                if (depthFrame != null)
-                {
-                    depthFrame.CopyFrameDataToArray(this.depthArray);
-                    System.Buffer.BlockCopy(this.depthArray, 0, this.byteDepthArray, 0, this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL);
-                    System.Buffer.BlockCopy(BitConverter.GetBytes(utcTime), 0, this.byteDepthArray, this.kinect.DepthFrameSource.FrameDescription.Height * this.kinect.DepthFrameSource.FrameDescription.Width * BYTES_PER_DEPTH_PIXEL,sizeof(double));
-                    this.depthConnector.Broadcast(this.byteDepthArray);
-                }
-            }
+            // Record the current Unix epoch timestamp and convert it to a byte array for serialization.
+            long timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            byte[] timestampBytes = BitConverter.GetBytes(timestamp);
 
-            using (InfraredFrame irFrame = multiSourceFrame.InfraredFrameReference.AcquireFrame())
+            // If clients exist, convert the RGB frame to a byte array and send it followed by a timestamp.
+            if (this.colorConnector.HasClients)
             {
-                if (irFrame != null)
+                using (ColorFrame colorFrame = multiSourceFrame.ColorFrameReference.AcquireFrame())
                 {
-                    irFrame.CopyFrameDataToArray(this.irArray);
-                    System.Buffer.BlockCopy(this.irArray, 0, this.byteIRArray, 0, this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width * BYTES_PER_IR_PIXEL);
-                    System.Buffer.BlockCopy(BitConverter.GetBytes(utcTime), 0, this.byteIRArray, this.kinect.InfraredFrameSource.FrameDescription.Height * this.kinect.InfraredFrameSource.FrameDescription.Width * BYTES_PER_IR_PIXEL, sizeof(double));
-                    this.irConnector.Broadcast(this.byteIRArray);
-                }
-            }
-
-            using (BodyFrame bodyFrame = multiSourceFrame.BodyFrameReference.AcquireFrame())
-            {
-                if (bodyFrame != null)
-                {
-                    bodyFrame.GetAndRefreshBodyData(this.bodyArray);
-                    string jsonString = JsonConvert.SerializeObject(this.bodyArray);
-                    int diff = 28000 - jsonString.Length;
-                    for (int i = 0; i < diff;i++ )
+                    if (colorFrame != null)
                     {
-                        jsonString += " ";
+                        if (colorFrame.RawColorImageFormat == ColorImageFormat.Bgra)
+                        {
+                            // Allocate a new byte buffer to store this RGB frame and timestamp.
+                            var colorArraySize = colorFrame.ColorFrameSource.FrameDescription.Height *
+                                                 colorFrame.ColorFrameSource.FrameDescription.Width *
+                                                 colorFrame.ColorFrameSource.FrameDescription.BytesPerPixel;
+                            var colorBuffer = new byte[colorArraySize + sizeof(long)];
+
+                            // Convert the color frame into the byte buffer.
+                            colorFrame.CopyConvertedFrameDataToArray(colorBuffer, ColorImageFormat.Bgra);
+
+                            // Append the system timestamp to the end of the buffer.
+                            System.Buffer.BlockCopy(timestampBytes, 0, colorBuffer, (int)colorArraySize, sizeof(long));
+
+                            // Transmit the byte buffer to color clients.
+                            this.colorConnector.Broadcast(colorBuffer);
+                        }
+                        else
+                        {
+                            EventLog.WriteEntry("Received color frame of unexpected format: " + colorFrame.RawColorImageFormat);
+                        }
                     }
-                    byte[] bodyByteArray = new byte[jsonString.Length*sizeof(char) + sizeof(double)];
-                    System.Buffer.BlockCopy(jsonString.ToCharArray(), 0, bodyByteArray, 0, jsonString.Length * sizeof(char));
-                    System.Buffer.BlockCopy(BitConverter.GetBytes(utcTime), 0, bodyByteArray, jsonString.Length * sizeof(char),sizeof(double));
-                    this.bodyConnector.Broadcast(bodyByteArray);
+                }
+            }
+
+            // If clients exist, convert the RGB frame to a byte array and send it followed by a timestamp.
+            if (this.depthConnector.HasClients)
+            {
+                using (DepthFrame depthFrame = multiSourceFrame.DepthFrameReference.AcquireFrame())
+                {
+                    if (depthFrame != null)
+                    {
+                        // Allocate a new byte buffer to store this depth frame and timestamp.
+                        var depthArraySize = depthFrame.DepthFrameSource.FrameDescription.Height *
+                                             depthFrame.DepthFrameSource.FrameDescription.Width *
+                                             depthFrame.DepthFrameSource.FrameDescription.BytesPerPixel;
+                        var depthBuffer = new byte[depthArraySize + sizeof(long)];
+
+                        // Convert the depth frame into the byte buffer.
+                        using (var depthFrameBuffer = depthFrame.LockImageBuffer())
+                        {
+                            Marshal.Copy(depthFrameBuffer.UnderlyingBuffer, depthBuffer, 0, (int)depthFrameBuffer.Size);
+                        }
+
+                        // Append the system timestamp to the end of the buffer.
+                        System.Buffer.BlockCopy(timestampBytes, 0, depthBuffer, (int)depthArraySize, sizeof(long));
+
+                        // Transmit the byte buffer to color clients.
+                        this.depthConnector.Broadcast(depthBuffer);
+                    }
+                }
+            }
+
+            // If clients exist, convert the IR frame to a byte array and send it followed by a timestamp.
+            if (this.irConnector.HasClients)
+            {
+                using (InfraredFrame irFrame = multiSourceFrame.InfraredFrameReference.AcquireFrame())
+                {
+                    if (irFrame != null)
+                    {
+                        // Allocate a new byte buffer to store this IR frame and timestamp.
+                        var irArraySize = irFrame.InfraredFrameSource.FrameDescription.Height *
+                                          irFrame.InfraredFrameSource.FrameDescription.Width *
+                                          irFrame.InfraredFrameSource.FrameDescription.BytesPerPixel;
+                        var irBuffer = new byte[irArraySize + sizeof(long)];
+
+                        // Convert the IR frame into the byte buffer.
+                        using (var irFrameBuffer = irFrame.LockImageBuffer())
+                        {
+                            Marshal.Copy(irFrameBuffer.UnderlyingBuffer, irBuffer, 0, (int)irFrameBuffer.Size);
+                        }
+
+                        // Append the system timestamp to the end of the buffer.
+                        System.Buffer.BlockCopy(timestampBytes, 0, irBuffer, (int)irArraySize, sizeof(long));
+
+                        // Transmit the byte buffer to color clients.
+                        this.irConnector.Broadcast(irBuffer);
+                    }
+                }
+            }
+
+            // If clients exist, convert the tracked skeletons to a JSON array and send it with a timestamp.
+            if (this.bodyConnector.HasClients)
+            {
+                using (BodyFrame bodyFrame = multiSourceFrame.BodyFrameReference.AcquireFrame())
+                {
+                    if (bodyFrame != null)
+                    {
+                        var bodyArray = new Body[this.kinect.BodyFrameSource.BodyCount];
+                        bodyFrame.GetAndRefreshBodyData(bodyArray);
+
+                        using (MemoryStream stream = new MemoryStream())
+                        {
+                            string json = JsonConvert.SerializeObject(bodyArray);
+                            byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
+                            this.bodyConnector.Broadcast(bytes);
+                        }
+                    }
                 }
             }
         }
 
-        private void onAudioFrameArrived(object sender,AudioBeamFrameArrivedEventArgs e)
+        private void onAudioFrameArrived(object sender, AudioBeamFrameArrivedEventArgs e)
         {
-            AudioBeamFrameReference audioFrameRefrence = e.FrameReference;
-            try
-            {
-                AudioBeamFrameList frameList = audioFrameRefrence.AcquireBeamFrames();
-                if (frameList != null)
-                {
-                    using (frameList)
-                    {
-                        IReadOnlyList<AudioBeamSubFrame> subFrameList = frameList[0].SubFrames;
+            // Return if there are no audio clients.
+            if (this.audioConnector.HasClients) return;
 
-                        foreach (AudioBeamSubFrame subFrame in subFrameList)
-                        {
-                            this.audioContainer.utcTime = (DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
-                            this.audioContainer.beamAngle = subFrame.BeamAngle;
-                            this.audioContainer.beamAngleConfidence = subFrame.BeamAngleConfidence;
-                            byte[] array = new byte[this.audioSource.SubFrameLengthInBytes];
-                            subFrame.CopyFrameDataToArray(array);
-                            for (int i = 0; i < array.Length;i+=sizeof(float))
-                            {
-                                audioContainer.audioStream[(int)(i / sizeof(float))] = BitConverter.ToSingle(array, i);
-                            }
-                            string jsonString = JsonConvert.SerializeObject(this.audioContainer);
-                            int diff = 4100 - jsonString.Length;
-                            for (int i = 0; i < diff;i++)
-                            {
-                                jsonString += " ";
-                            }
-                            byte[] transmittedData = new byte[jsonString.Length*sizeof(char)];
-                            System.Buffer.BlockCopy(jsonString.ToCharArray(), 0, transmittedData, 0, transmittedData.Length);
-                            this.audioConnector.Broadcast(transmittedData);
-                            subFrame.Dispose();
-                        }
-                    }
-                    frameList.Dispose();
-                }
-            }
-            catch
+            // Create an audio container representing Kinect audio buffer data.
+            var audioContainer = new AudioContainer();
+            audioContainer.samplingFrequency = 16000;
+            audioContainer.frameLifeTime = 0.016;
+            audioContainer.numSamplesPerFrame = (int)(audioContainer.samplingFrequency * audioContainer.frameLifeTime);
+            audioContainer.numBytesPerSample = sizeof(float);
+            audioContainer.audioStream = new float[256];
+
+            // Record the current Unix epoch timestamp.
+            audioContainer.timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+            // TODO: add relative timestamp to audio?
+            // this.audioContainer.relativeTime = e.FrameReference.RelativeTime.TotalMilliseconds;
+
+            // Retrieve audio beams for current frame.
+            AudioBeamFrameList frameList = e.FrameReference.AcquireBeamFrames();
+            if (frameList == null) return;
+
+            // Serialize all of the subframes and send as a JSON message.
+            using (frameList)
             {
+                // Only one audio beam is supported. Get the subframe list for the one beam.
+                IReadOnlyList<AudioBeamSubFrame> subFrameList = frameList[0].SubFrames;
+
+                // Consolidate the beam subframes into a single JSON message.
+                foreach (AudioBeamSubFrame subFrame in subFrameList)
+                {
+                    using (subFrame)
+                    {
+                        audioContainer.beamAngle = subFrame.BeamAngle;
+                        audioContainer.beamAngleConfidence = subFrame.BeamAngleConfidence;
+
+                        byte[] array = new byte[subFrame.FrameLengthInBytes];
+                        subFrame.CopyFrameDataToArray(array);
+                        for (int i = 0; i < array.Length; i += sizeof(float))
+                        {
+                            audioContainer.audioStream[(int)(i / sizeof(float))] = BitConverter.ToSingle(array, i);
+                        }
+
+                        string json = JsonConvert.SerializeObject(audioContainer);
+                        byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
+                        this.audioConnector.Broadcast(bytes);
+                    }
+                }
             }
         }
 
@@ -284,6 +333,7 @@ namespace PersonalRobotics.Kinect2Server
     /// <summary>
     /// An exception indicating that a Kinect was not detected.
     /// </summary>
+    [Serializable]
     public class KinectException : Exception
     {
         public KinectException()
@@ -307,6 +357,7 @@ namespace PersonalRobotics.Kinect2Server
     public class IsConnectedChangedEventArgs : EventArgs
     {
         bool isConnected;
+
         public IsConnectedChangedEventArgs(bool isConnected)
         {
             this.isConnected = isConnected;
