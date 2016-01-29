@@ -9,6 +9,14 @@
 *.user
 *.sln.docstates
 
+#Jsonfile
+/packages
+/Kinect2Server/bin
+/Kinect2Server/obj
+/Kinect2Server/Json60r3
+/Kinect2Server/Service References
+
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
