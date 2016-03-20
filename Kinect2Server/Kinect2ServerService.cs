@@ -25,12 +25,12 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************************************/
 using Microsoft.Kinect;
 using System;
+using System.Drawing;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.ServiceProcess;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
-using System.Windows.Media;
 
 namespace PersonalRobotics.Kinect2Server
 {
@@ -173,14 +173,32 @@ namespace PersonalRobotics.Kinect2Server
                         // Allocate a new byte buffer to store this RGB frame and timestamp.
                         var colorArraySize = colorFrame.ColorFrameSource.FrameDescription.Height *
                                              colorFrame.ColorFrameSource.FrameDescription.Width *
-                                             4; //  (PixelFormats.Bgr32.BitsPerPixel + 7) / 8;
+                                             3; // BGR8 = 24bpp
                         var colorBuffer = new byte[colorArraySize + sizeof(long)];
+                        var colorRect = new Rectangle(0, 0,
+                                                      colorFrame.ColorFrameSource.FrameDescription.Width,
+                                                      colorFrame.ColorFrameSource.FrameDescription.Height);
 
-                        // Convert the depth frame into the byte buffer.
-                        GCHandle colorBufferHandle = GCHandle.Alloc(colorBuffer, GCHandleType.Pinned);
-                        IntPtr colorBufferAddress = colorBufferHandle.AddrOfPinnedObject();
-                        colorFrame.CopyConvertedFrameDataToIntPtr(colorBufferAddress, (uint)colorArraySize, ColorImageFormat.Bgra);
-                        colorBufferHandle.Free();
+                        // Wrap RGB frames into bitmap buffers.
+                        var bmp32 = new Bitmap(colorFrame.ColorFrameSource.FrameDescription.Width,
+                                               colorFrame.ColorFrameSource.FrameDescription.Height,
+                                               System.Drawing.Imaging.PixelFormat.Format32bppRgb);
+                        var bmp24 = new Bitmap(bmp32.Width, bmp32.Height, bmp32.Width * 3,
+                                               System.Drawing.Imaging.PixelFormat.Format24bppRgb,
+                                               Marshal.UnsafeAddrOfPinnedArrayElement(colorBuffer, 0));
+
+                        // Lock the bitmap's bits.
+                        System.Drawing.Imaging.BitmapData bmpData =
+                            bmp32.LockBits(colorRect, System.Drawing.Imaging.ImageLockMode.ReadWrite, bmp32.PixelFormat);
+                        IntPtr bmpPtr = bmpData.Scan0;
+                        colorFrame.CopyConvertedFrameDataToIntPtr(bmpPtr, (uint)(bmpData.Width * bmpData.Height * 4), ColorImageFormat.Bgra);
+                        bmp32.UnlockBits(bmpData);
+
+                        // Convert from 32bpp to 24bpp using System.Drawing.
+                        using (Graphics gr = Graphics.FromImage(bmp24))
+                        {
+                            gr.DrawImage(bmp32, new Rectangle(0, 0, bmp24.Width, bmp24.Height));
+                        }
 
                         // Append the system timestamp to the end of the buffer.
                         System.Buffer.BlockCopy(timestampBytes, 0, colorBuffer, (int)colorArraySize, sizeof(long));
@@ -257,7 +275,22 @@ namespace PersonalRobotics.Kinect2Server
                         var bodyArray = new Body[this.kinect.BodyFrameSource.BodyCount];
                         bodyFrame.GetAndRefreshBodyData(bodyArray);
 
-                        string json = JsonConvert.SerializeObject(bodyArray) + "\n";
+                        // Only serialize the actively tracked bodies.
+                        List<Body> bodyList = new List<Body>();
+                        for(var i = 0; i < bodyArray.Length; ++i)
+                        {
+                            Body body = bodyArray[i];
+                            if (body.IsTracked)
+                                bodyList.Add(body);
+                        }
+
+                        // Combine the body array with a timestamp.
+                        Dictionary<string, object> bodyJson = new Dictionary<string, object>{
+                            {"time", timestamp},
+                            {"bodies", bodyList}
+                        };
+
+                        string json = JsonConvert.SerializeObject(bodyJson) + "\n";
                         byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
                         this.bodyConnector.Broadcast(bytes);
                     }
