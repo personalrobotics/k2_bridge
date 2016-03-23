@@ -201,7 +201,7 @@ namespace PersonalRobotics.Kinect2Server
                         }
 
                         // Append the system timestamp to the end of the buffer.
-                        System.Buffer.BlockCopy(timestampBytes, 0, colorBuffer, (int)colorArraySize, sizeof(long));
+                        Buffer.BlockCopy(timestampBytes, 0, colorBuffer, (int)colorArraySize, sizeof(long));
 
                         // Transmit the byte buffer to color clients.
                         this.colorConnector.Broadcast(colorBuffer);
@@ -229,7 +229,7 @@ namespace PersonalRobotics.Kinect2Server
                         }
 
                         // Append the system timestamp to the end of the buffer.
-                        System.Buffer.BlockCopy(timestampBytes, 0, depthBuffer, (int)depthArraySize, sizeof(long));
+                        Buffer.BlockCopy(timestampBytes, 0, depthBuffer, (int)depthArraySize, sizeof(long));
 
                         // Transmit the byte buffer to color clients.
                         this.depthConnector.Broadcast(depthBuffer);
@@ -257,7 +257,7 @@ namespace PersonalRobotics.Kinect2Server
                         }
 
                         // Append the system timestamp to the end of the buffer.
-                        System.Buffer.BlockCopy(timestampBytes, 0, irBuffer, (int)irArraySize, sizeof(long));
+                        Buffer.BlockCopy(timestampBytes, 0, irBuffer, (int)irArraySize, sizeof(long));
 
                         // Transmit the byte buffer to color clients.
                         this.irConnector.Broadcast(irBuffer);

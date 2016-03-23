@@ -27,6 +27,7 @@ using System;
 using System.Collections;
 using System.Net;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading;
 
 namespace PersonalRobotics.Kinect2Server
@@ -36,12 +37,17 @@ namespace PersonalRobotics.Kinect2Server
     /// </summary>
     public sealed class Client : IDisposable
     {
+        public const int BufferSize = 32;
+        public readonly byte[] buffer = new byte[BufferSize];
+        public readonly EndPoint endpoint;
         public readonly Socket socket;
         public readonly Semaphore sends;
+        public readonly StringBuilder stringBuffer = new StringBuilder();
 
         public Client(Socket socket, int concurrentSends)
         {
             this.socket = socket;
+            this.endpoint = socket.RemoteEndPoint;
             this.sends = new Semaphore(concurrentSends, concurrentSends);
         }
 
@@ -86,13 +92,62 @@ namespace PersonalRobotics.Kinect2Server
             {
                 AsyncNetworkConnector connector = (AsyncNetworkConnector)ar.AsyncState;
                 Socket socket = connector.listenerSocket.EndAccept(ar);
-                connector.connectedClients.Add(new Client(socket, this.concurrentSends));
+                var client = new Client(socket, this.concurrentSends);
+
+                socket.BeginReceive(client.buffer, 0, Client.BufferSize, 0,
+                    new AsyncCallback(OnReceive), client);
+                connector.connectedClients.Add(client);
                 connector.listenerSocket.BeginAccept(new AsyncCallback(OnAccept), connector);
-                Console.WriteLine("Connected to: " + socket.RemoteEndPoint); // TODO: put this in the event log instead.
+
+                // TODO: put this in the event log instead.
+                Console.WriteLine("Connected to: " + client.endpoint);
             }
             catch (SocketException e)
             {
                 Console.WriteLine("Error accepting client: " + e);
+            }
+        }
+
+        public static void OnReceive(IAsyncResult ar)
+        {
+            String content = String.Empty;
+            Client client = (Client)ar.AsyncState;
+
+            // Read data from the client socket. 
+            if (!client.socket.Connected)
+                return;
+
+            // Receive new data from the socket.
+            int bytesRead = client.socket.EndReceive(ar);
+            if (bytesRead > 0)
+            {
+                // Store the data received so far.
+                client.stringBuffer.Append(Encoding.ASCII.GetString(client.buffer, 0, bytesRead));
+
+                // Check for a newline.
+                content = client.stringBuffer.ToString();
+                var newlineIdx = content.IndexOf("\n");
+                if (newlineIdx >= 0)
+                {
+                    // Put the remaining buffer back in the StringBuilder.
+                    client.stringBuffer.Clear();
+                    client.stringBuffer.Append(content.Substring(newlineIdx + 1));
+
+                    // If we receive the word "OK", reset one of the send tokens.
+                    if (content.Substring(0, newlineIdx).IndexOf("OK") >= 0)
+                        client.sends.Release();
+                }
+            }
+
+            // Queue the next line.
+            try
+            {
+                client.socket.BeginReceive(client.buffer, 0, Client.BufferSize, 0,
+                    new AsyncCallback(OnReceive), client);
+            }
+            catch (SocketException)
+            {
+                // Do nothing.
             }
         }
 
@@ -104,12 +159,11 @@ namespace PersonalRobotics.Kinect2Server
                 if (client.socket.Connected)
                 {
                     client.socket.EndSend(ar);
-                    client.sends.Release();
                 }
             }
             catch (SocketException)
             {
-                Console.WriteLine("Disconnected from: " + client.socket.RemoteEndPoint);
+                Console.WriteLine("Disconnected from: " + client.endpoint);
                 client.socket.Close();
                 this.connectedClients.Remove(client);
             }
@@ -120,17 +174,12 @@ namespace PersonalRobotics.Kinect2Server
             try
             {
                 if (client.sends.WaitOne(0))
-                {
-                    client.socket.BeginSend(data, 0, data.Length, SocketFlags.None, new AsyncCallback(this.OnSend), client);
-                }
-                else
-                {
-                    Console.WriteLine("Skipping send to client: " + client.socket.RemoteEndPoint);
-                }
+                    client.socket.BeginSend(data, 0, data.Length, SocketFlags.None,
+                        new AsyncCallback(this.OnSend), client);
             }
             catch (SocketException)
             {
-                Console.WriteLine("Disconnected from: " + client.socket.RemoteEndPoint);
+                Console.WriteLine("Disconnected from: " + client.endpoint);
                 client.socket.Close();
                 this.connectedClients.Remove(client);
             }
