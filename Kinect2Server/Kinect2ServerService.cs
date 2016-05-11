@@ -346,8 +346,8 @@ namespace PersonalRobotics.Kinect2Server
                             // Combine the body array with a timestamp.
                             // TODO: suppress invalid face tracking information!
                             Dictionary<string, object> bodyJson = new Dictionary<string, object>{
-                                {"time", timestamp},
-                                {"bodies", bodyList}
+                                {"Time", timestamp},
+                                {"Bodies", bodyList}
                             };
 
                             string json = JsonConvert.SerializeObject(bodyJson,
@@ -438,8 +438,9 @@ namespace PersonalRobotics.Kinect2Server
 
                 // Combine the body array with a timestamp.
                 Dictionary<string, object> faceJson = new Dictionary<string, object>{
-                    {"time", timestamp},
-                    {"alignment", faceAlignment},
+                    {"Time", timestamp},
+                    {"TrackingId", frame.HighDefinitionFaceFrameSource.TrackingId},
+                    {"Alignment", faceAlignment},
                 };
 
                 // Send face data to clients.
