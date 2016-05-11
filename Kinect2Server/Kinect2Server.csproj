@@ -102,6 +102,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AsyncNetworkConnector.cs" />
+    <Compile Include="ContractResolver.cs" />
     <Compile Include="DataContainers.cs" />
     <Compile Include="Kinect2ServerInstaller.cs">
       <SubType>Component</SubType>

@@ -350,7 +350,8 @@ namespace PersonalRobotics.Kinect2Server
                                 {"bodies", bodyList}
                             };
 
-                            string json = JsonConvert.SerializeObject(bodyJson) + "\n";
+                            string json = JsonConvert.SerializeObject(bodyJson,
+                                new JsonSerializerSettings { ContractResolver = new BodyContractResolver() }) + "\n";
                             byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
                             this.bodyConnector.Broadcast(bytes);
                         }
@@ -404,7 +405,8 @@ namespace PersonalRobotics.Kinect2Server
                         }
 
                         // Send audio data to clients.
-                        string json = JsonConvert.SerializeObject(audioContainer) + "\n";
+                        string json = JsonConvert.SerializeObject(audioContainer,
+                            new JsonSerializerSettings { ContractResolver = new AudioContractResolver() }) + "\n";
                         byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
                         this.audioConnector.Broadcast(bytes);
                     }
@@ -441,7 +443,8 @@ namespace PersonalRobotics.Kinect2Server
                 };
 
                 // Send face data to clients.
-                string json = JsonConvert.SerializeObject(faceJson) + "\n";
+                string json = JsonConvert.SerializeObject(faceJson,
+                    new JsonSerializerSettings { ContractResolver = new FaceContractResolver() }) + "\n";
                 byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
                 this.faceConnector.Broadcast(bytes);
             }
