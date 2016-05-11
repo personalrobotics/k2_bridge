@@ -324,8 +324,6 @@ namespace PersonalRobotics.Kinect2Server
                                 if (!body.IsTracked) continue;
 
                                 // Activate the corresponding face tracker using this body's tracking ID.
-                                if (faceSources[i].TrackingId != body.TrackingId)
-                                    Console.WriteLine("SET ID: " + body.TrackingId);
                                 faceSources[i].TrackingId = body.TrackingId;
                             }
                         }
