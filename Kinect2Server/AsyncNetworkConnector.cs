@@ -106,6 +106,10 @@ namespace PersonalRobotics.Kinect2Server
             {
                 Console.WriteLine("Error accepting client: " + e);
             }
+            catch (System.ObjectDisposedException)
+            {
+                // Do nothing, this is probably just a shutdown race condition on socket cleanup.
+            }
         }
 
         public static void OnReceive(IAsyncResult ar)

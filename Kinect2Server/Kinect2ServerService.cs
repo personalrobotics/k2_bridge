@@ -24,6 +24,7 @@ TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF TH
 ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ********************************************************************************************************/
 using Microsoft.Kinect;
+using Microsoft.Kinect.Face;
 using System;
 using System.Drawing;
 using System.Collections.Generic;
@@ -45,12 +46,15 @@ namespace PersonalRobotics.Kinect2Server
         MultiSourceFrameReader reader;
         AudioSource audioSource;
         AudioBeamFrameReader audioReader;
+        HighDefinitionFaceFrameSource faceSource;
+        HighDefinitionFaceFrameReader faceReader;
 
         AsyncNetworkConnector colorConnector;
         AsyncNetworkConnector depthConnector;
         AsyncNetworkConnector irConnector;
         AsyncNetworkConnector bodyConnector;
         AsyncNetworkConnector audioConnector;
+        AsyncNetworkConnector faceConnector;
 
         public Kinect2ServerService()
         {
@@ -121,12 +125,35 @@ namespace PersonalRobotics.Kinect2Server
                 this.audioReader.FrameArrived += this.onAudioFrameArrived;
             }
 
+            // Register as a handler for the face source data being returned by the Kinect.
+            this.faceSource = new HighDefinitionFaceFrameSource(this.kinect);
+            if (this.faceSource == null)
+            {
+                EventLog.WriteEntry("Unable to connect to Kinect face source.");
+                ExitCode = -5;
+                throw new KinectException("Unable to connect to Kinect face source.");
+            }
+
+            // Register as a handler for the face reader data being returned by the Kinect.
+            this.faceReader = this.faceSource.OpenReader();
+            if (this.faceReader == null)
+            {
+                EventLog.WriteEntry("Unable to create reader for Kinect face source.");
+                ExitCode = -6;
+                throw new KinectException("Unable to create reader for Kinect face source.");
+            }
+            else
+            {
+                this.faceReader.FrameArrived += this.onFaceFrameArrived;
+            }
+
             // Create network connectors that will send out the data when it is received.
             this.colorConnector = new AsyncNetworkConnector(Properties.Settings.Default.RgbImagePort);
             this.depthConnector = new AsyncNetworkConnector(Properties.Settings.Default.DepthImagePort);
             this.irConnector = new AsyncNetworkConnector(Properties.Settings.Default.IrImagePort);
             this.bodyConnector = new AsyncNetworkConnector(Properties.Settings.Default.BodyPort);
             this.audioConnector = new AsyncNetworkConnector(Properties.Settings.Default.AudioPort);
+            this.faceConnector = new AsyncNetworkConnector(Properties.Settings.Default.FacePort);
 
             // Open the server connections.
             this.colorConnector.Listen();
@@ -134,6 +161,7 @@ namespace PersonalRobotics.Kinect2Server
             this.irConnector.Listen();
             this.bodyConnector.Listen();
             this.audioConnector.Listen();
+            this.faceConnector.Listen();
         }
 
         protected override void OnStop()
@@ -144,6 +172,7 @@ namespace PersonalRobotics.Kinect2Server
             this.irConnector.Close();
             this.bodyConnector.Close();
             this.audioConnector.Close();
+            this.faceConnector.Close();
 
             this.reader.Dispose();
             this.audioReader.Dispose();
@@ -152,6 +181,7 @@ namespace PersonalRobotics.Kinect2Server
             this.irConnector.Dispose();
             this.bodyConnector.Dispose();
             this.audioConnector.Dispose();
+            this.faceConnector.Dispose();
         }
 
         private void OnFrameArrived(object sender, MultiSourceFrameArrivedEventArgs e)
@@ -342,11 +372,49 @@ namespace PersonalRobotics.Kinect2Server
                             audioContainer.audioStream[(int)(i / sizeof(float))] = BitConverter.ToSingle(array, i);
                         }
 
+                        // Send audio data to clients.
                         string json = JsonConvert.SerializeObject(audioContainer) + "\n";
                         byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
                         this.audioConnector.Broadcast(bytes);
                     }
                 }
+            }
+        }
+
+        private void onFaceFrameArrived(object sender, HighDefinitionFaceFrameArrivedEventArgs e)
+        {
+            // Return if there are no face clients.
+            if (this.faceConnector.HasClients) return;
+
+            // Retrieve face data for current frame.
+            var frame = e.FrameReference.AcquireFrame();
+            if (frame == null) return;
+
+            using (frame)
+            {
+                // Ignore untracked faces.
+                if (!frame.IsFaceTracked) return;
+                if (!frame.IsTrackingIdValid) return;
+
+                // Record the current Unix epoch timestamp and convert it to a byte array for serialization.
+                long timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+
+                // Retrieve face alignment data.
+                var faceAlignment = new FaceAlignment();
+                frame.GetAndRefreshFaceAlignmentResult(faceAlignment);
+
+                // Combine the body array with a timestamp.
+                Dictionary<string, object> faceJson = new Dictionary<string, object>{
+                    {"time", timestamp},
+                    {"alignment", faceAlignment},
+                    {"skinColor", frame.FaceModel.SkinColor},
+                    {"hairColor", frame.FaceModel.HairColor}
+                };
+
+                // Send face data to clients.
+                string json = JsonConvert.SerializeObject(faceJson) + "\n";
+                byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
+                this.faceConnector.Broadcast(bytes);
             }
         }
 

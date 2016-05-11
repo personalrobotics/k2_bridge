@@ -17,5 +17,8 @@
     <Setting Name="AudioPort" Type="System.Int16" Scope="Application">
       <Value Profile="(Default)">9004</Value>
     </Setting>
+    <Setting Name="FacePort" Type="System.Int16" Scope="Application">
+      <Value Profile="(Default)">9005</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
