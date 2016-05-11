@@ -46,8 +46,8 @@ namespace PersonalRobotics.Kinect2Server
         MultiSourceFrameReader reader;
         AudioSource audioSource;
         AudioBeamFrameReader audioReader;
-        HighDefinitionFaceFrameSource faceSource;
-        HighDefinitionFaceFrameReader faceReader;
+        HighDefinitionFaceFrameSource[] faceSources;
+        HighDefinitionFaceFrameReader[] faceReaders;
 
         AsyncNetworkConnector colorConnector;
         AsyncNetworkConnector depthConnector;
@@ -125,27 +125,36 @@ namespace PersonalRobotics.Kinect2Server
                 this.audioReader.FrameArrived += this.onAudioFrameArrived;
             }
 
-            // Register as a handler for the face source data being returned by the Kinect.
-            this.faceSource = new HighDefinitionFaceFrameSource(this.kinect);
-            if (this.faceSource == null)
+            // Create an array of face sources/readers for each possible body.
+            // These will be activated on demand as the corresponding bodies are tracked.
+            this.faceSources = new HighDefinitionFaceFrameSource[this.kinect.BodyFrameSource.BodyCount];
+            this.faceReaders = new HighDefinitionFaceFrameReader[this.kinect.BodyFrameSource.BodyCount];
+
+            for (var i = 0; i < faceSources.Length; ++i)
             {
-                EventLog.WriteEntry("Unable to connect to Kinect face source.");
-                ExitCode = -5;
-                throw new KinectException("Unable to connect to Kinect face source.");
+                // Register as a handler for the face source data being returned by the Kinect.
+                this.faceSources[i] = new HighDefinitionFaceFrameSource(this.kinect);
+                if (this.faceSources[i] == null)
+                {
+                    EventLog.WriteEntry("Unable to create Kinect face source [" + i + "].");
+                    ExitCode = -5;
+                    throw new KinectException("Unable to create Kinect face source [" + i + "].");
+                }
+
+                // Register as a handler for the face reader data being returned by the Kinect.
+                this.faceReaders[i] = this.faceSources[i].OpenReader();
+                if (this.faceReaders[i] == null)
+                {
+                    EventLog.WriteEntry("Unable to create reader for Kinect face source [" + i + "].");
+                    ExitCode = -6;
+                    throw new KinectException("Unable to create reader for Kinect face source [" + i + "].");
+                }
+                else
+                {
+                    this.faceReaders[i].FrameArrived += this.onFaceFrameArrived;
+                }
             }
 
-            // Register as a handler for the face reader data being returned by the Kinect.
-            this.faceReader = this.faceSource.OpenReader();
-            if (this.faceReader == null)
-            {
-                EventLog.WriteEntry("Unable to create reader for Kinect face source.");
-                ExitCode = -6;
-                throw new KinectException("Unable to create reader for Kinect face source.");
-            }
-            else
-            {
-                this.faceReader.FrameArrived += this.onFaceFrameArrived;
-            }
 
             // Create network connectors that will send out the data when it is received.
             this.colorConnector = new AsyncNetworkConnector(Properties.Settings.Default.RgbImagePort);
@@ -296,7 +305,7 @@ namespace PersonalRobotics.Kinect2Server
             }
 
             // If clients exist, convert the tracked skeletons to a JSON array and send it with a timestamp.
-            if (this.bodyConnector.HasClients)
+            if (this.bodyConnector.HasClients || this.faceConnector.HasClients)
             {
                 using (BodyFrame bodyFrame = multiSourceFrame.BodyFrameReference.AcquireFrame())
                 {
@@ -305,24 +314,48 @@ namespace PersonalRobotics.Kinect2Server
                         var bodyArray = new Body[this.kinect.BodyFrameSource.BodyCount];
                         bodyFrame.GetAndRefreshBodyData(bodyArray);
 
-                        // Only serialize the actively tracked bodies.
-                        List<Body> bodyList = new List<Body>();
-                        for(var i = 0; i < bodyArray.Length; ++i)
+                        // Configure tracking IDs for bodies that have been added.
+                        if (this.faceConnector.HasClients)
                         {
-                            Body body = bodyArray[i];
-                            if (body.IsTracked)
-                                bodyList.Add(body);
+                            for (var i = 0; i < bodyArray.Length; ++i)
+                            {
+                                // Only process the actively tracked bodies.
+                                Body body = bodyArray[i];
+                                if (!body.IsTracked) continue;
+
+                                // Activate the corresponding face tracker using this body's tracking ID.
+                                if (faceSources[i].TrackingId != body.TrackingId)
+                                    Console.WriteLine("SET ID: " + body.TrackingId);
+                                faceSources[i].TrackingId = body.TrackingId;
+                            }
                         }
 
-                        // Combine the body array with a timestamp.
-                        Dictionary<string, object> bodyJson = new Dictionary<string, object>{
-                            {"time", timestamp},
-                            {"bodies", bodyList}
-                        };
+                        // Serialize body tracking information to clients.
+                        if (this.bodyConnector.HasClients)
+                        {
+                            // Iterate through the full list of bodies (which might not all be tracked).
+                            List<Body> bodyList = new List<Body>();
+                            for(var i = 0; i < bodyArray.Length; ++i)
+                            {
+                                // Only process the actively tracked bodies.
+                                Body body = bodyArray[i];
+                                if (!body.IsTracked) continue;
 
-                        string json = JsonConvert.SerializeObject(bodyJson) + "\n";
-                        byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
-                        this.bodyConnector.Broadcast(bytes);
+                                // Add this body to the list of bodies that are serialized to clients.
+                                bodyList.Add(body);
+                            }
+
+                            // Combine the body array with a timestamp.
+                            // TODO: suppress invalid face tracking information!
+                            Dictionary<string, object> bodyJson = new Dictionary<string, object>{
+                                {"time", timestamp},
+                                {"bodies", bodyList}
+                            };
+
+                            string json = JsonConvert.SerializeObject(bodyJson) + "\n";
+                            byte[] bytes = System.Text.Encoding.ASCII.GetBytes(json);
+                            this.bodyConnector.Broadcast(bytes);
+                        }
                     }
                 }
             }
@@ -331,7 +364,7 @@ namespace PersonalRobotics.Kinect2Server
         private void onAudioFrameArrived(object sender, AudioBeamFrameArrivedEventArgs e)
         {
             // Return if there are no audio clients.
-            if (this.audioConnector.HasClients) return;
+            if (!this.audioConnector.HasClients) return;
 
             // Create an audio container representing Kinect audio buffer data.
             var audioContainer = new AudioContainer();
@@ -384,7 +417,7 @@ namespace PersonalRobotics.Kinect2Server
         private void onFaceFrameArrived(object sender, HighDefinitionFaceFrameArrivedEventArgs e)
         {
             // Return if there are no face clients.
-            if (this.faceConnector.HasClients) return;
+            if (!this.faceConnector.HasClients) return;
 
             // Retrieve face data for current frame.
             var frame = e.FrameReference.AcquireFrame();
@@ -393,8 +426,8 @@ namespace PersonalRobotics.Kinect2Server
             using (frame)
             {
                 // Ignore untracked faces.
-                if (!frame.IsFaceTracked) return;
                 if (!frame.IsTrackingIdValid) return;
+                if (!frame.IsFaceTracked) return;
 
                 // Record the current Unix epoch timestamp and convert it to a byte array for serialization.
                 long timestamp = DateTimeOffset.Now.ToUnixTimeMilliseconds();
@@ -407,8 +440,6 @@ namespace PersonalRobotics.Kinect2Server
                 Dictionary<string, object> faceJson = new Dictionary<string, object>{
                     {"time", timestamp},
                     {"alignment", faceAlignment},
-                    {"skinColor", frame.FaceModel.SkinColor},
-                    {"hairColor", frame.FaceModel.HairColor}
                 };
 
                 // Send face data to clients.
