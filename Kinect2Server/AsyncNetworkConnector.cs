@@ -121,31 +121,31 @@ namespace PersonalRobotics.Kinect2Server
             if (!client.socket.Connected)
                 return;
 
-            // Receive new data from the socket.
-            int bytesRead = client.socket.EndReceive(ar);
-            if (bytesRead > 0)
-            {
-                // Store the data received so far.
-                client.stringBuffer.Append(Encoding.ASCII.GetString(client.buffer, 0, bytesRead));
-
-                // Check for a newline.
-                content = client.stringBuffer.ToString();
-                var newlineIdx = content.IndexOf("\n");
-                if (newlineIdx >= 0)
-                {
-                    // Put the remaining buffer back in the StringBuilder.
-                    client.stringBuffer.Clear();
-                    client.stringBuffer.Append(content.Substring(newlineIdx + 1));
-
-                    // If we receive the word "OK", reset one of the send tokens.
-                    if (content.Substring(0, newlineIdx).IndexOf("OK") >= 0)
-                        client.sends.Release();
-                }
-            }
-
-            // Queue the next line.
             try
             {
+                // Receive new data from the socket.
+                int bytesRead = client.socket.EndReceive(ar);
+                if (bytesRead > 0)
+                {
+                    // Store the data received so far.
+                    client.stringBuffer.Append(Encoding.ASCII.GetString(client.buffer, 0, bytesRead));
+
+                    // Check for a newline.
+                    content = client.stringBuffer.ToString();
+                    var newlineIdx = content.IndexOf("\n");
+                    if (newlineIdx >= 0)
+                    {
+                        // Put the remaining buffer back in the StringBuilder.
+                        client.stringBuffer.Clear();
+                        client.stringBuffer.Append(content.Substring(newlineIdx + 1));
+
+                        // If we receive the word "OK", reset one of the send tokens.
+                        if (content.Substring(0, newlineIdx).IndexOf("OK") >= 0)
+                            client.sends.Release();
+                    }
+                }
+
+                // Queue the next line.
                 client.socket.BeginReceive(client.buffer, 0, Client.BufferSize, 0,
                     new AsyncCallback(OnReceive), client);
             }
