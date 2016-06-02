@@ -4,8 +4,7 @@ Server application for Kinect for Windows v2
 
 This software is a part of software package for integrating kinect for windows v2 with ROS. The software package is divided into two parts. One part runs on windows machine and dumps the data over the network, while, the other part runs on linux machine which reads the stream and publishes appropriate ROS topics.
 
-This software is meant to be run on the windows side of the system. The corresponding package to run on linux side is called k2_client and can be found at: https://github.com/personalrobotics/k2_client/releases
-
+This software is meant to be run on the windows side of the system. The corresponding package to run on linux side is called k2_client and can be found at: https://github.com/personalrobotics/k2_client
 
 Setting up the software
 =======================
@@ -23,9 +22,9 @@ MS Visual Studio: https://app.vssps.visualstudio.com/profile/review?download=tru
 C) Download and install the kinect SDK from following link.
 Kinect SDK: http://www.microsoft.com/en-us/download/details.aspx?id=43661
 
-D) Download the k2_server software from following page and extract it to any location of your choice. Ensure to download the source code and not the binaries.
+D) Download the k2_server software from following page and extract it to any location of your choice.
 
-k2_server source: https://github.com/personalrobotics/k2_server/releases
+k2_server source: https://github.com/personalrobotics/k2_server/tree/service
 
 E) Connect the Kinect to the USB-3.0 port of the windows machine and start one of the sample applications to check if everything is working. If the sample don't run, refer to MSDN for troubleshooting tips. Once done, close all the kinect applications.
 
@@ -43,9 +42,9 @@ I) To run, simply click on start button or run the kinect2server.exe executable 
 
 A) Install windows as you would on a regular machine.
 
-B) Download the binaries from following link and extract it to any location of you choice. Ensure to download the binaries and not the source code. Also download and install the kinect SDK from [here](http://www.microsoft.com/en-us/download/details.aspx?id=43661)
+B) Download the binaries from following link and extract it to any location of you choice
 
-k2_server binaries: https://github.com/personalrobotics/k2_server/releases
+k2_server binaries: https://github.com/personalrobotics/k2_server/tree/Binaries
 
 C) Disable IPv6 on the machine by following the instructions on this page.
 

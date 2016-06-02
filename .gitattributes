@@ -1,0 +1,4 @@
+# Set the default behavior, in case people don't have core.autocrlf set.
+*.cs text eol=crlf
+*.config text eol=crlf
+*.ico binary
