@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>k2_client</name>  
+  <version>1.1.0</version>
+  <description>
+      Client ROS nodes for the PRL Kinect2 Server
+  </description>
+  <author email="aaa@cs.cmu.edu">Anurag Jakhotia</author>
+  <author email="pkv@cs.cmu.edu">Pras Velagapudi</author>
+  <author email="Stefania.Pellegrinelli@itia.cnr.it">Stefania Pellegrinelli</author>
+  <maintainer email="pkv@cs.cmu.edu">Pras Velagapudi</maintainer>
+  <license>BSD</license>
+  <url type="website">http://github.com/personalrobotics/k2_client</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>message_generation</build_depend>
+  <exec_depend>message_runtime</exec_depend>
+  <depend>roscpp</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>cv_bridge</depend>
+  <depend>image_transport</depend>
+  <depend>camera_info_manager</depend> 
+  <depend>yaml-cpp</depend> 
+  
+</package>
+
+

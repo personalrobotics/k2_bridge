@@ -1,0 +1,12 @@
+Header header
+int32 leanTrackingState
+Lean lean
+bool isRestricted
+uint64 trackingId
+int32 clippedEdges
+float32 handRightConfidence
+int32 handRightState
+float32 handLeftConfidence
+int32 handLeftState
+JointOrientationAndType[] jointOrientations
+JointPositionAndState[] jointPositions
