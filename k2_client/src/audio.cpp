@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 
         // Convert the JSON message to a ROS message.
         k2_client::Audio audio;
-        audio.header.stamp = ros::Time(node["utcTime"].as<unsigned long>());
+        audio.header.stamp = ros::Time(node["timestamp"].as<unsigned long>());
         audio.header.frame_id = frame_id;
         audio.beamAngle = node["beamAngle"].as<double>();
         audio.beamAngleConfidence = node["beamAngleConfidence"].as<double>();
