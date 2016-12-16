@@ -1,10 +1,10 @@
 <launch>
-    <arg name="host"/>
+    <arg name="host" value="192.168.2.64"/>
+    <arg name="skeleton_frame" value="base_link" />
     <group ns="/head/kinect2">
         <param name="rgb_frame" value="/head/kinect2/rgb" />
         <param name="depth_frame" value="/head/kinect2/depth" />
         <param name="ir_frame" value="/head/kinect2/depth" />
-        <param name="skeleton_frame" value="base_link" />
 
         <node name="k2_audio" pkg="k2_client" type="audio">
             <param name="host" value="$(arg host)" />
@@ -26,9 +26,10 @@
             <param name="host" value="$(arg host)" />
         </node> 
         
-	<node name="skeleton_draw" pkg="k2_client" >
+	<node name="skeleton_draw" pkg="k2_client" type="skeleton_draw.py">
             <param name="base_frame" value="$(arg skeleton_frame)" />
-    </group>
+    </node>
+	</group>
 </launch>
 
 

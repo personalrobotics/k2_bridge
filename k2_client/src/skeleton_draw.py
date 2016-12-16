@@ -9,7 +9,7 @@ import json
 import tf
 # import time
 from k2_client.msg import BodyArray,Body
-from physical_activities.msg import Joints
+#from physical_activities.msg import Joints
 from std_msgs.msg import String,ColorRGBA
 from visualization_msgs.msg import Marker,MarkerArray
 
