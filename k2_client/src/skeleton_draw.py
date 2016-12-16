@@ -25,7 +25,7 @@ class SkeletonDraw(object):
         self.posture_pub = rospy.Publisher('/skeleton_draw',
                                         MarkerArray, queue_size=5)
 
-        self.base_frame=rospy.get_param('skeleton_frame','/base_link')
+        self.base_frame=rospy.get_param('skeleton_frame','/skeleton_link')
         ### other variables
         self.body = None
         self.posture = {}

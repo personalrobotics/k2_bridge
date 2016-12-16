@@ -1,6 +1,6 @@
 <launch>
     <arg name="host" value="192.168.2.64"/>
-    <arg name="skeleton_frame" value="base_link" />
+    <arg name="skeleton_frame" value="skeleton_link" />
     <group ns="/head/kinect2">
         <param name="rgb_frame" value="/head/kinect2/rgb" />
         <param name="depth_frame" value="/head/kinect2/depth" />
@@ -26,7 +26,7 @@
             <param name="host" value="$(arg host)" />
         </node> 
         
-        <node name="base_frame" pkg="tf" type="static_transform_publisher" args="-5.0 0.0 2.0 0.5 0.5 0.5 0.5 map base_link 100"/>     
+        <node name="base_frame" pkg="tf" type="static_transform_publisher" args="-5.0 0.0 2.0 0.5 0.5 0.5 0.5 map skeleton_link 100"/>     
 
 	<node name="skeleton_draw" pkg="k2_client" type="skeleton_draw.py">
             <param name="base_frame" value="$(arg skeleton_frame)" />
