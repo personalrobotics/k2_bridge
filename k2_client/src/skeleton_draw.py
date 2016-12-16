@@ -9,7 +9,7 @@ import json
 import tf
 # import time
 from k2_client.msg import BodyArray,Body
-#from physical_activities.msg import Joints
+#  from physical_activities.msg import Joints
 from std_msgs.msg import String,ColorRGBA
 from visualization_msgs.msg import Marker,MarkerArray
 
@@ -35,7 +35,7 @@ class SkeletonDraw(object):
         self.points = 25
         self.show = False
         self.elbow_threshold = 15
-        self.body_info = Joints()
+        #  self.body_info = Joints()
         self.response = None
         self.count = 0
         self.message = None
