@@ -25,7 +25,7 @@ class SkeletonDraw(object):
         self.posture_pub = rospy.Publisher('/skeleton_draw',
                                         MarkerArray, queue_size=5)
 
-        self.base_frame=rospy.get_param('skeleton_frame','base_link')
+        self.base_frame=rospy.get_param('skeleton_frame','/base_link')
         ### other variables
         self.body = None
         self.posture = {}
@@ -96,9 +96,10 @@ class SkeletonDraw(object):
             if self.colorid.has_key(body.trackingId):
                 bodycolor=self.colorid.get(body.trackingId)
             else:
-                bodycolor=self.userColor[self.colorcount]
+                print self.colorcount,len(self.userColor)
+                bodycolor=self.userColor[self.colorcount%len(self.userColor)]
                 self.colorid[body.trackingId]=bodycolor
-                self.colorcount=self.colorcount+1%len(self.userColor)
+                self.colorcount=self.colorcount+1
 
 
             for ind_joint,joint in enumerate(body.jointPositions):

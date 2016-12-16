@@ -26,6 +26,8 @@
             <param name="host" value="$(arg host)" />
         </node> 
         
+        <node name="base_frame" pkg="tf" type="static_transform_publisher" args="-5.0 0.0 2.0 0.5 0.5 0.5 0.5 map base_link 100"/>     
+
 	<node name="skeleton_draw" pkg="k2_client" type="skeleton_draw.py">
             <param name="base_frame" value="$(arg skeleton_frame)" />
     </node>
