@@ -9,8 +9,7 @@ This software is a part of software package for integrating kinect for windows v
 
 ## License
 
-`k2_bridge` is licensed under a BSD license. See `LICENSE` for more information.
-
+`k2_bridge` is licensed under a BSD license. See the [LICENSE](k2_client/LICENSE.md) for more information.
 
 ## Contributors
 
